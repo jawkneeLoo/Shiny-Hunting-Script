@@ -32,12 +32,7 @@ class Base:
         pydirectinput.keyUp(key)
         
     def pokecenter(self):
-        """ Unova pokecenter by default"""
-        #heal
-        self.holdKey('x', 7)
-        self.holdKey('down', 2.5)
-        time.sleep(0.5)
-        pydirectinput.press('1') #outside + bike
+        raise NotImplementedError('Not Implemented')
         
     def toLocation(self):
         for key, length in self.instructions:
@@ -45,20 +40,22 @@ class Base:
                 self.holdKey(key, length)
             else:
                 time.sleep(length)
-        
+    
     def isShiny(self):
         """ horde of 5 by default """
         text = ''
         img = pyautogui.screenshot()
-        poke1 = img.crop((510, 110, 800, 125))
+        gry = img.convert('L')
+        bw = gry.point(lambda x: 255 if x<128 else 0, '1')
+        poke1 = bw.crop((600, 110, 860, 125))
         text += pytesseract.image_to_string(poke1)[:-1]
-        poke2 = img.crop((800, 110, 1090, 125))
+        poke2 = bw.crop((860, 110, 1120, 125))
         text += pytesseract.image_to_string(poke2)[:-1]
-        poke3 = img.crop((1090, 110, 1380, 125))
+        poke3 = bw.crop((1120, 110, 1380, 125))
         text += pytesseract.image_to_string(poke3)[:-1]
-        poke4 = img.crop((510, 150, 800, 165))
+        poke4 = bw.crop((600, 150, 860, 165))
         text += pytesseract.image_to_string(poke4)[:-1]
-        poke5 = img.crop((1090, 150, 1380, 165))
+        poke5 = bw.crop((1120, 150, 1380, 165))
         text += pytesseract.image_to_string(poke5)[:-1]
         print(text)
         return 'shiny' in text.lower()
@@ -69,25 +66,28 @@ class Base:
         time.sleep(1.5)
         
     def stall(self):
+        length = 0
         while True:
             pydirectinput.press('left')
             time.sleep(60)
             pydirectinput.press('right')
             time.sleep(60)
+            length = length + 120
+            print(length / 60)
     
     def checkScreen(self):
-        img = pyautogui.screenshot()
-        px1 = img.getpixel((1020, 500))
-        time.sleep(1)
-        px2 = img.getpixel((1020, 500))
-        if px1 != px2:
-            time.sleep(20)
+        if not pyautogui.pixelMatchesColor(900, 200, (28,35,40), tolerance = 10):
+            time.sleep(11)
+            pos = self.imgOnScreen('battleNeedle.png')
+            while pos is None:
+                time.sleep(1)
+                pos = self.imgOnScreen('battleNeedle.png')
             if not self.isShiny():
                 self.unwantedEncounter()
             else:
                 print('Shiny detected!')
                 self.stall()
-    
+            
     def imgOnScreen(self, fileName):
         script_dir = os.path.dirname(__file__)
         needle_path = os.path.join(
@@ -100,19 +100,52 @@ class Base:
     def horde(self):
         pydirectinput.press('c')
         time.sleep(11)
+        pos = self.imgOnScreen('battleNeedle.png')
+        while pos is None:
+            time.sleep(1)
+            pos = self.imgOnScreen('battleNeedle.png')
         if not self.isShiny():
             self.unwantedEncounter()
         else:
             print('Shiny detected!')
             self.stall()
+
             
     def hunt(self):
         self.pokecenter()
         #route to shunting location
         self.toLocation()
-        #check if in unwanted battle
+        pydirectinput.press('c')
         self.checkScreen()
         for i in range(6):
             self.horde()
         pydirectinput.press('v')
         time.sleep(4)
+        
+class Hoenn(Base):
+    def pokecenter(self):
+        #healing at pokecenter
+        self.holdKey('x', 3.7) 
+        #leaving pokecenter
+        self.holdKey('down', 1.3)
+        time.sleep(1)
+        #outside + bike
+        pydirectinput.press('1')
+        
+class Sinnoh(Base):
+    def pokecenter(self):
+        #healing at pokecenter
+        self.holdKey('x', 7.3) 
+        #leaving pokecenter
+        self.holdKey('down', 2)
+        time.sleep(0.5)
+        #outside + bike
+        pydirectinput.press('1')
+        
+class Unova(Base):
+    def pokecenter(self):
+        #heal
+        self.holdKey('x', 7)
+        self.holdKey('down', 2.5)
+        time.sleep(0.5)
+        pydirectinput.press('1') #outside + bike
