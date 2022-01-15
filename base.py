@@ -40,7 +40,11 @@ class Base:
                 self.holdKey(key, length)
             else:
                 time.sleep(length)
-    
+    def temp(self):
+        img = pyautogui.screenshot()
+        gry = img.convert('L')
+        bw = gry.point(lambda x: 255 if x<128 else 0, '1')
+        bw.show()
     def isShiny(self):
         """ horde of 5 by default """
         text = ''
@@ -76,7 +80,8 @@ class Base:
             print(length / 60)
     
     def checkScreen(self):
-        if not pyautogui.pixelMatchesColor(900, 200, (28,35,40), tolerance = 10):
+        time.sleep(0.1)
+        if not pyautogui.pixelMatchesColor(900, 200, (28,35,40), tolerance = 20):
             time.sleep(11)
             pos = self.imgOnScreen('battleNeedle.png')
             while pos is None:
@@ -99,12 +104,12 @@ class Base:
     
     def horde(self):
         pydirectinput.press('c')
-        time.sleep(11)
-        pos = self.imgOnScreen('battleNeedle.png')
-        while pos is None:
-            time.sleep(1)
-            pos = self.imgOnScreen('battleNeedle.png')
+        time.sleep(10)
         if not self.isShiny():
+            pos = self.imgOnScreen('battleNeedle.png')
+            while pos is None:
+                time.sleep(1)
+                pos = self.imgOnScreen('battleNeedle.png')
             self.unwantedEncounter()
         else:
             print('Shiny detected!')

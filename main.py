@@ -10,8 +10,8 @@ def main():
     #task = base.Hoenn('magikarp.csv')
     #task = specialEncounter.Litwick()
     #task = specialEncounter.Sandile()
-    #task = base.Sinnoh('swablu.csv')
-    task = specialEncounter.Ralts()
+    task = base.Sinnoh('swablu.csv')
+    #task = specialEncounter.Ralts()
     #task = base.Unova('duosion.csv')
     
     print('Script starting in 1 second...')
