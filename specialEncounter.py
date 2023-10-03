@@ -1,7 +1,7 @@
 import base
 import pyautogui
 import pydirectinput
-import pytesseract
+import easyocr
 import time
 
 class evEXP(base.Hoenn):
@@ -16,7 +16,7 @@ class evEXP(base.Hoenn):
         if not self.isShiny():
             #attack horde with AOE
             for i in range(3):
-                pydirectinput.press('x')
+                pydirectinput.press('z')
             #enough time for EXP gain + level up text
             time.sleep(12)
         else:
@@ -38,27 +38,3 @@ class Litwick(base.Unova):
         time.sleep(1)
         pydirectinput.press('v')
         time.sleep(4)
-
-class Ralts(base.Sinnoh):
-    def __init__(self):
-        super().__init__('ralts.csv')
-        
-    def isShiny(self):
-        img = pyautogui.screenshot().crop((600, 110, 1380, 125))
-        gry = img.convert('L')
-        bw = gry.point(lambda x: 255 if x<128 else 0, '1')
-        text = pytesseract.image_to_string(bw)[:-1]
-        print(text)
-        return 'shiny' in text.lower()
-
-class Sandile(base.Unova):
-    def __init__(self):
-        super().__init__('sandile.csv')
-        
-    def isShiny(self):
-        img = pyautogui.screenshot().crop((600, 110, 1380, 125))
-        gry = img.convert('L')
-        bw = gry.point(lambda x: 255 if x<128 else 0, '1')
-        text = pytesseract.image_to_string(bw)[:-1]
-        print(text)
-        return 'shiny' in text.lower()

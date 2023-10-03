@@ -1,14 +1,18 @@
 import csv
+import easyocr
+import numpy as np
 import os
 import pyautogui
 import pydirectinput
-import pytesseract
 import time
 
 class Base:
-    def __init__(self, fileName):
-        pytesseract.tesseract_cmd = r'C:\Users\liuru\anaconda3\Library\bin\tesseract.exe'
-        
+    """A class used to represent the base functions of PokeMMO grinding."""
+
+    def __init__(self, fileName: str):
+        # OCR reader
+        self.reader = easyocr.Reader(['en'], detector=False)
+        # file paths for instructions
         script_dir = os.path.dirname(__file__)
         needle_path = os.path.join(
             script_dir, 
@@ -16,9 +20,17 @@ class Base:
             fileName
         )
         
+        # image of bag to check if in battle
+        self.battle_needle = os.path.join(
+            script_dir, 
+            'needles', 
+            'battleNeedle.png'
+        )
+        # list of key presses and time delay
         self.instructions = []
         with open(needle_path, 'r') as f:
             reader = csv.reader(f, delimiter="\t")
+            # reads list of key inputs
             for pair in reader:
                 pair = pair[0].split(',')
                 key = pair[0]
@@ -26,7 +38,8 @@ class Base:
                 self.instructions.append((key, length))
         
     
-    def holdKey(self, key, seconds = 1.0):
+    def holdKey(self, key: str, seconds:float = 1.0):
+        """Holds a key down for specified number of seconds."""
         pydirectinput.keyDown(key)
         time.sleep(seconds)
         pydirectinput.keyUp(key)
@@ -35,41 +48,39 @@ class Base:
         raise NotImplementedError('Not Implemented')
         
     def toLocation(self):
+        """Follows the list of instructions to farming location."""
         for key, length in self.instructions:
             if key != 'sleep':
                 self.holdKey(key, length)
             else:
                 time.sleep(length)
-    def temp(self):
+
+    def debug(self):
+        """Method for debug testing."""
         img = pyautogui.screenshot()
         gry = img.convert('L')
         bw = gry.point(lambda x: 255 if x<128 else 0, '1')
         bw.show()
+
     def isShiny(self):
-        """ horde of 5 by default """
+        """Checks if encounter contains a shiny Pokemon."""
+        # Pokemon name regions
+        regions = [(300,125,300,25), (530,75,820,25), (530,115,820,25)]
         text = ''
-        img = pyautogui.screenshot()
-        gry = img.convert('L')
-        bw = gry.point(lambda x: 255 if x<128 else 0, '1')
-        poke1 = bw.crop((600, 110, 860, 125))
-        text += pytesseract.image_to_string(poke1)[:-1]
-        poke2 = bw.crop((860, 110, 1120, 125))
-        text += pytesseract.image_to_string(poke2)[:-1]
-        poke3 = bw.crop((1120, 110, 1380, 125))
-        text += pytesseract.image_to_string(poke3)[:-1]
-        poke4 = bw.crop((600, 150, 860, 165))
-        text += pytesseract.image_to_string(poke4)[:-1]
-        poke5 = bw.crop((1120, 150, 1380, 165))
-        text += pytesseract.image_to_string(poke5)[:-1]
-        print(text)
+        for r in regions:
+            img = np.array(pyautogui.screenshot(region=r))
+            text += self.reader.recognize(img,detail=0)[0]
         return 'shiny' in text.lower()
             
     def unwantedEncounter(self):
+        """Runs from unwanted encounters."""
         self.holdKey('right', 0.5)
-        pydirectinput.press('x')
+        pydirectinput.press('z')
         time.sleep(1.5)
         
     def stall(self):
+        """Stalls for time if user is AFK when shiny is found so user does not
+        time out from being AFK. Moves left or right once every minute."""
         length = 0
         while True:
             pydirectinput.press('left')
@@ -78,38 +89,36 @@ class Base:
             time.sleep(60)
             length = length + 120
             print(length / 60)
+            
+    def imgOnScreen(self, fileName: str):
+        """Checks if specified image is found on the screen."""
+        return pyautogui.locateOnScreen(fileName)
     
     def checkScreen(self):
-        time.sleep(0.1)
-        if not pyautogui.pixelMatchesColor(900, 200, (28,35,40), tolerance = 20):
-            time.sleep(11)
-            pos = self.imgOnScreen('battleNeedle.png')
-            while pos is None:
-                time.sleep(1)
-                pos = self.imgOnScreen('battleNeedle.png')
+        """Checks if horde is encountered upon entering location."""
+        time.sleep(11)
+        # checks if in battle
+        bag = self.imgOnScreen(self.battle_needle)
+        if bag is not None:
+            # takes action when battle loads
             if not self.isShiny():
                 self.unwantedEncounter()
             else:
                 print('Shiny detected!')
                 self.stall()
-            
-    def imgOnScreen(self, fileName):
-        script_dir = os.path.dirname(__file__)
-        needle_path = os.path.join(
-            script_dir, 
-            'needles', 
-            fileName
-        )
-        return pyautogui.locateOnScreen(needle_path)
     
     def horde(self):
+        """Automates Pokemon horde encounters."""
+        # uses sweet scent to start horde fight
         pydirectinput.press('c')
         time.sleep(10)
+        # checks if bag icon is on screen to confirm battle is not lagging
+        bag = self.imgOnScreen(self.battle_needle)
+        while bag is None:
+            time.sleep(1)
+            bag = self.imgOnScreen(self.battle_needle)
+        # takes action when battle loads
         if not self.isShiny():
-            pos = self.imgOnScreen('battleNeedle.png')
-            while pos is None:
-                time.sleep(1)
-                pos = self.imgOnScreen('battleNeedle.png')
             self.unwantedEncounter()
         else:
             print('Shiny detected!')
@@ -117,40 +126,44 @@ class Base:
 
             
     def hunt(self):
+        """Overall hunt method for healing, pathing, and grinding."""
         self.pokecenter()
-        #route to shunting location
+        # route to grinding location
         self.toLocation()
-        pydirectinput.press('c')
+        # check if entering location enters battle
         self.checkScreen()
         for i in range(6):
             self.horde()
+        # teleport
         pydirectinput.press('v')
         time.sleep(4)
         
 class Hoenn(Base):
     def pokecenter(self):
-        #healing at pokecenter
-        self.holdKey('x', 3.7) 
-        #leaving pokecenter
+        # healing at pokecenter
+        self.holdKey('z', 0.7) 
+        # leaving pokecenter
         self.holdKey('down', 1.3)
         time.sleep(1)
-        #outside + bike
+        # outside + bike
         pydirectinput.press('1')
         
 class Sinnoh(Base):
     def pokecenter(self):
-        #healing at pokecenter
-        self.holdKey('x', 7.3) 
-        #leaving pokecenter
+        # healing at pokecenter
+        self.holdKey('z', 4) 
+        # leaving pokecenter
         self.holdKey('down', 2)
         time.sleep(0.5)
-        #outside + bike
+        # outside + bike
         pydirectinput.press('1')
         
 class Unova(Base):
     def pokecenter(self):
-        #heal
-        self.holdKey('x', 7)
+        # healing at pokecenter
+        self.holdKey('z', 4)
+        # leaving pokecenter
         self.holdKey('down', 2.5)
         time.sleep(0.5)
-        pydirectinput.press('1') #outside + bike
+        # outside + bike
+        pydirectinput.press('1')
