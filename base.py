@@ -2,8 +2,8 @@ import csv
 import easyocr
 import numpy as np
 import os
-import pyautogui
-import pydirectinput
+import pyautogui as pyag
+import pydirectinput as pydi
 import time
 
 class Base:
@@ -40,9 +40,9 @@ class Base:
     
     def holdKey(self, key: str, seconds:float = 1.0):
         """Holds a key down for specified number of seconds."""
-        pydirectinput.keyDown(key)
+        pydi.keyDown(key)
         time.sleep(seconds)
-        pydirectinput.keyUp(key)
+        pydi.keyUp(key)
         
     def pokecenter(self):
         raise NotImplementedError('Not Implemented')
@@ -54,28 +54,25 @@ class Base:
                 self.holdKey(key, length)
             else:
                 time.sleep(length)
-
-    def debug(self):
-        """Method for debug testing."""
-        img = pyautogui.screenshot()
-        gry = img.convert('L')
-        bw = gry.point(lambda x: 255 if x<128 else 0, '1')
-        bw.show()
+            
+    def isInBattle(self) -> bool:
+        """Checks if battle UI is on the screen."""
+        return pyag.pixelMatchesColor(287,725, (166, 105, 219), tolerance=5)
 
     def isShiny(self):
         """Checks if encounter contains a shiny Pokemon."""
         # Pokemon name regions
-        regions = [(300,125,300,25), (530,75,820,25), (530,115,820,25)]
+        regions = [(300,148,300,25), (530,98,820,25), (530,138,820,25)]
         text = ''
         for r in regions:
-            img = np.array(pyautogui.screenshot(region=r))
+            img = np.array(pyag.screenshot(region=r))
             text += self.reader.recognize(img,detail=0)[0]
         return 'shiny' in text.lower()
             
     def unwantedEncounter(self):
         """Runs from unwanted encounters."""
         self.holdKey('right', 0.5)
-        pydirectinput.press('z')
+        pydi.press('z')
         time.sleep(1.5)
         
     def stall(self):
@@ -83,23 +80,20 @@ class Base:
         time out from being AFK. Moves left or right once every minute."""
         length = 0
         while True:
-            pydirectinput.press('left')
+            pydi.press('left')
             time.sleep(60)
-            pydirectinput.press('right')
+            pydi.press('right')
             time.sleep(60)
+            # prints how many minutes
             length = length + 120
             print(length / 60)
-            
-    def imgOnScreen(self, fileName: str):
-        """Checks if specified image is found on the screen."""
-        return pyautogui.locateOnScreen(fileName)
     
-    def checkScreen(self):
+    def accidentalEncounter(self):
         """Checks if horde is encountered upon entering location."""
-        time.sleep(11)
-        # checks if in battle
-        bag = self.imgOnScreen(self.battle_needle)
-        if bag is not None:
+        time.sleep(2.5)
+        # checks if battle UI has started
+        if self.isInBattle():
+            time.sleep(7)
             # takes action when battle loads
             if not self.isShiny():
                 self.unwantedEncounter()
@@ -110,13 +104,11 @@ class Base:
     def horde(self):
         """Automates Pokemon horde encounters."""
         # uses sweet scent to start horde fight
-        pydirectinput.press('c')
+        pydi.press('c')
         time.sleep(10)
-        # checks if bag icon is on screen to confirm battle is not lagging
-        bag = self.imgOnScreen(self.battle_needle)
-        while bag is None:
+        # checks if UI is on screen to confirm battle is not lagging
+        while not self.isInBattle():
             time.sleep(1)
-            bag = self.imgOnScreen(self.battle_needle)
         # takes action when battle loads
         if not self.isShiny():
             self.unwantedEncounter()
@@ -124,29 +116,35 @@ class Base:
             print('Shiny detected!')
             self.stall()
 
-            
     def hunt(self):
-        """Overall hunt method for healing, pathing, and grinding."""
+        """Overall method for healing, pathing, and grinding."""
         self.pokecenter()
         # route to grinding location
         self.toLocation()
         # check if entering location enters battle
-        self.checkScreen()
+        self.accidentalEncounter()
         for i in range(6):
             self.horde()
         # teleport
-        pydirectinput.press('v')
+        pydi.press('v')
         time.sleep(4)
+
+    def debug(self):
+        for key, length in self.instructions:
+            if key != 'sleep':
+                self.holdKey(key, length)
+            else:
+                time.sleep(length)
         
 class Hoenn(Base):
     def pokecenter(self):
         # healing at pokecenter
-        self.holdKey('z', 0.7) 
+        self.holdKey('z', 0.9)
         # leaving pokecenter
         self.holdKey('down', 1.3)
         time.sleep(1)
         # outside + bike
-        pydirectinput.press('1')
+        pydi.press('1')
         
 class Sinnoh(Base):
     def pokecenter(self):
@@ -156,7 +154,7 @@ class Sinnoh(Base):
         self.holdKey('down', 2)
         time.sleep(0.5)
         # outside + bike
-        pydirectinput.press('1')
+        pydi.press('1')
         
 class Unova(Base):
     def pokecenter(self):
@@ -166,4 +164,4 @@ class Unova(Base):
         self.holdKey('down', 2.5)
         time.sleep(0.5)
         # outside + bike
-        pydirectinput.press('1')
+        pydi.press('1')
