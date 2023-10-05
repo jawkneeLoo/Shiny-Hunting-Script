@@ -59,6 +59,10 @@ class Base:
         """Checks if battle UI is on the screen."""
         return pyag.pixelMatchesColor(287,725, (166, 105, 219), tolerance=5)
 
+    def isBattleReady(self) -> bool:
+        """Checks if battle UI is ready."""
+        return pyag.pixelMatchesColor(502,763, (165, 104, 217), tolerance=5)
+
     def isShiny(self):
         """Checks if encounter contains a shiny Pokemon."""
         # Pokemon name regions
@@ -93,7 +97,8 @@ class Base:
         time.sleep(2.5)
         # checks if battle UI has started
         if self.isInBattle():
-            time.sleep(7)
+            while not self.isBattleReady():
+                time.sleep(0.5)
             # takes action when battle loads
             if not self.isShiny():
                 self.unwantedEncounter()
@@ -105,10 +110,9 @@ class Base:
         """Automates Pokemon horde encounters."""
         # uses sweet scent to start horde fight
         pydi.press('c')
-        time.sleep(10)
         # checks if UI is on screen to confirm battle is not lagging
-        while not self.isInBattle():
-            time.sleep(1)
+        while not self.isBattleReady():
+            time.sleep(0.5)
         # takes action when battle loads
         if not self.isShiny():
             self.unwantedEncounter()

@@ -5,9 +5,10 @@ import time
 def main():
     #task = specialEncounter.grindHoenn('bfEXP.csv')
     #task = specialEncounter.grindUnova('rapidashSpdEV.csv')
-    task = specialEncounter.grindSinnoh('rhydonAtkEV.csv')
+    #task = specialEncounter.grindSinnoh('rhydonAtkEV.csv')
     #task = base.Unova('vanillish.csv')
     #task = specialEncounter.Litwick()
+    task = specialEncounter.legendaryDog()
 
     print('Script starting in 1 second...')
     time.sleep(1)

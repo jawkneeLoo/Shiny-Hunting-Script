@@ -1,4 +1,5 @@
 import base
+import numpy as np
 import pyautogui as pyag
 import pydirectinput as pydi
 import time
@@ -10,10 +11,9 @@ class grindUnova(base.Unova):
     def horde(self):
         # uses sweet scent to start horde fight
         pydi.press('c')
-        time.sleep(10)
         # checks if UI is on screen to confirm battle is not lagging
-        while not self.isInBattle():
-            time.sleep(1)
+        while not self.isBattleReady():
+            time.sleep(0.5)
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
@@ -32,10 +32,9 @@ class grindSinnoh(base.Sinnoh):
     def horde(self):
         # uses sweet scent to start horde fight
         pydi.press('c')
-        time.sleep(11)
         # checks if UI is on screen to confirm battle is not lagging
-        while not self.isInBattle():
-            time.sleep(1)
+        while not self.isBattleReady():
+            time.sleep(0.5)
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
@@ -68,10 +67,9 @@ class grindHoenn(base.Hoenn):
     def horde(self):
         # uses sweet scent to start horde fight
         pydi.press('c')
-        time.sleep(10)
         # checks if UI is on screen to confirm battle is not lagging
-        while not self.isInBattle():
-            time.sleep(1)
+        while not self.isBattleReady():
+            time.sleep(0.5)
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
@@ -101,3 +99,43 @@ class Litwick(base.Unova):
         time.sleep(1)
         pydi.press('v')
         time.sleep(4)
+
+class legendaryDog(base.Unova):
+    def __init__(self):
+        # random file name
+        self.toCheck = ['shiny', 'entei', 'suicune', 'raikou']
+        self.regions = [(300,148,300,25), (530,98,820,25), (530,138,820,25)]
+        super().__init__('bfEXP.csv')
+        
+    def isImportant(self):
+        """Checks if encounter contains a shiny Pokemon."""
+        # Pokemon name regions
+        text = ''
+        for r in self.regions:
+            img = pyag.screenshot(region=r)
+            img = np.array(img)
+            text += self.reader.recognize(img,detail=0)[0]
+        text = text.strip()
+        print(text)
+        for check in self.toCheck:
+            if check in text.lower():
+                return True
+        return False
+
+    def encounter(self):
+        while not self.isBattleReady():
+            time.sleep(0.5)
+        if not self.isImportant():
+            self.unwantedEncounter()
+        else:
+            print('Shiny or legendary detected!')
+            self.stall()
+    
+    def hunt(self):
+        # runs back and forth
+        self.holdKey('right', 0.4)
+        if self.isInBattle():
+            self.encounter()
+        self.holdKey('left', 0.2)
+        if self.isInBattle():
+            self.encounter()
