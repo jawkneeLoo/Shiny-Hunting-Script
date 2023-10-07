@@ -69,7 +69,7 @@ class grindHoenn(base.Hoenn):
         pydi.press('c')
         # checks if UI is on screen to confirm battle is not lagging
         while not self.isBattleReady():
-            time.sleep(0.5)
+            time.sleep(0.3)
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
@@ -80,11 +80,29 @@ class grindHoenn(base.Hoenn):
         else:
             print('Shiny detected!')
             self.stall()
-            
+
+class Deino(base.Unova):
+    def __init__(self):
+        super().__init__('deino.csv')
+
+    def hunt(self):
+        self.pokecenter()
+        # route to grinding location
+        self.toLocation()
+        # check if entering location enters battle
+        self.accidentalEncounter()
+        for i in range(6):
+            self.horde()
+        # teleport
+        self.holdKey('down', 0.3)
+        time.sleep(2)
+        pydi.press('v')
+        time.sleep(4)
+
 class Litwick(base.Unova):
     def __init__(self):
         super().__init__('litwick.csv')
-        
+    
     def hunt(self):
         self.pokecenter()
         # route to grinding location
@@ -99,6 +117,7 @@ class Litwick(base.Unova):
         time.sleep(1)
         pydi.press('v')
         time.sleep(4)
+
 
 class legendaryDog(base.Unova):
     def __init__(self):

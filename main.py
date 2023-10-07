@@ -7,8 +7,8 @@ def main():
     #task = specialEncounter.grindUnova('rapidashSpdEV.csv')
     #task = specialEncounter.grindSinnoh('rhydonAtkEV.csv')
     #task = base.Unova('vanillish.csv')
-    #task = specialEncounter.Litwick()
-    task = specialEncounter.legendaryDog()
+    task = specialEncounter.Deino()
+    #task = specialEnqcounter.legendaryDog()
 
     print('Script starting in 1 second...')
     time.sleep(1)

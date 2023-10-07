@@ -10,6 +10,10 @@ class Base:
     """A class used to represent the base functions of PokeMMO grinding."""
 
     def __init__(self, fileName: str):
+        pyag.FAILSAFE = False
+        # clicks into game window
+        pyag.moveTo(100,100)
+        pyag.click()
         # OCR reader
         self.reader = easyocr.Reader(['en'], detector=False)
         # file paths for instructions
@@ -50,7 +54,13 @@ class Base:
     def toLocation(self):
         """Follows the list of instructions to farming location."""
         for key, length in self.instructions:
-            if key != 'sleep':
+            # move mouse to coords (key, value)
+            if key.isdigit() and (int(key) > 10):
+                pyag.moveTo(int(key), int(length))
+            elif key == 'click':
+                pydi.click()
+            # normal key input
+            elif key != 'sleep':
                 self.holdKey(key, length)
             else:
                 time.sleep(length)
@@ -71,13 +81,16 @@ class Base:
         for r in regions:
             img = np.array(pyag.screenshot(region=r))
             text += self.reader.recognize(img,detail=0)[0]
+        print(text)
         return 'shiny' in text.lower()
             
     def unwantedEncounter(self):
         """Runs from unwanted encounters."""
         self.holdKey('right', 0.5)
         pydi.press('z')
-        time.sleep(1.5)
+        # waits until UI fully fades due to lag
+        while self.isInBattle():
+            time.sleep(0.3)
         
     def stall(self):
         """Stalls for time if user is AFK when shiny is found so user does not
@@ -89,8 +102,8 @@ class Base:
             pydi.press('right')
             time.sleep(60)
             # prints how many minutes
-            length = length + 120
-            print(length / 60)
+            length = length + 2
+            print(length)
     
     def accidentalEncounter(self):
         """Checks if horde is encountered upon entering location."""
@@ -112,7 +125,7 @@ class Base:
         pydi.press('c')
         # checks if UI is on screen to confirm battle is not lagging
         while not self.isBattleReady():
-            time.sleep(0.5)
+            time.sleep(0.3)
         # takes action when battle loads
         if not self.isShiny():
             self.unwantedEncounter()
@@ -132,13 +145,6 @@ class Base:
         # teleport
         pydi.press('v')
         time.sleep(4)
-
-    def debug(self):
-        for key, length in self.instructions:
-            if key != 'sleep':
-                self.holdKey(key, length)
-            else:
-                time.sleep(length)
         
 class Hoenn(Base):
     def pokecenter(self):
@@ -163,7 +169,7 @@ class Sinnoh(Base):
 class Unova(Base):
     def pokecenter(self):
         # healing at pokecenter
-        self.holdKey('z', 4)
+        self.holdKey('z', 4.5)
         # leaving pokecenter
         self.holdKey('down', 2.5)
         time.sleep(0.5)
