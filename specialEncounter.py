@@ -4,7 +4,7 @@ import pyautogui as pyag
 import pydirectinput as pydi
 import time
 
-class grindUnova(base.Unova):
+class grindGen5(base.Gen5):
     def __init__(self, fileName):
         super().__init__(fileName)
         
@@ -25,7 +25,7 @@ class grindUnova(base.Unova):
             print('Shiny detected!')
             self.stall()
 
-class grindSinnoh(base.Sinnoh):
+class grindGen4(base.Gen4):
     def __init__(self, fileName):
         super().__init__(fileName)
         
@@ -60,7 +60,7 @@ class grindSinnoh(base.Sinnoh):
         pydi.press('v')
         time.sleep(4)
 
-class grindHoenn(base.Hoenn):
+class grindGen3(base.Gen3):
     def __init__(self, fileName):
         super().__init__(fileName)
         
@@ -81,50 +81,43 @@ class grindHoenn(base.Hoenn):
             print('Shiny detected!')
             self.stall()
 
-class Deino(base.Unova):
+class Deino(base.Gen5):
     def __init__(self):
         super().__init__('deino.csv')
 
-    def hunt(self):
-        self.pokecenter()
-        # route to grinding location
-        self.toLocation()
-        # check if entering location enters battle
-        self.accidentalEncounter()
-        for i in range(6):
-            self.horde()
-        # teleport
+    def leave(self):
+        # leave cave
         self.holdKey('down', 0.3)
-        time.sleep(2)
+        while not self.matchColor(5,815,(0,0,0)):
+            time.sleep(0.2)
+        time.sleep(1)
+        # teleport
         pydi.press('v')
-        time.sleep(4)
+        # sleep until pokecenter counter is visible
+        while not self.matchColor(self.pX, self.pY, self.pColor):
+            time.sleep(0.2)
 
-class Litwick(base.Unova):
+class Litwick(base.Gen5):
     def __init__(self):
         super().__init__('litwick.csv')
-    
-    def hunt(self):
-        self.pokecenter()
-        # route to grinding location
-        self.toLocation()
-        # check if entering location enters battle
-        self.accidentalEncounter()
-        for i in range(6):
-            self.horde()
+
+    def leave(self):
         # teleport
         self.holdKey('right', 6)
         self.holdKey('down', 1)
         time.sleep(1)
         pydi.press('v')
-        time.sleep(4)
+        # sleep until pokecenter counter is visible
+        while not self.matchColor(self.pX, self.pY, self.pColor):
+            time.sleep(0.2)
 
 
-class legendaryDog(base.Unova):
+class legendaryDog(base.Gen3):
     def __init__(self):
         # random file name
         self.toCheck = ['shiny', 'entei', 'suicune', 'raikou']
         self.regions = [(300,148,300,25), (530,98,820,25), (530,138,820,25)]
-        super().__init__('bfEXP.csv')
+        super().__init__()
         
     def isImportant(self):
         """Checks if encounter contains a shiny Pokemon."""

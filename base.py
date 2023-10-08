@@ -7,49 +7,69 @@ import pydirectinput as pydi
 import time
 
 class Base:
-    """A class used to represent the base functions of PokeMMO grinding."""
+    """A class used to represent the base functions of grinding."""
 
-    def __init__(self, fileName: str):
+    def __init__(self, fileName: str = None):
         pyag.FAILSAFE = False
         # clicks into game window
         pyag.moveTo(100,100)
         pyag.click()
         # OCR reader
         self.reader = easyocr.Reader(['en'], detector=False)
-        # file paths for instructions
-        script_dir = os.path.dirname(__file__)
-        needle_path = os.path.join(
-            script_dir, 
-            'paths', 
-            fileName
-        )
-        
-        # image of bag to check if in battle
-        self.battle_needle = os.path.join(
-            script_dir, 
-            'needles', 
-            'battleNeedle.png'
-        )
-        # list of key presses and time delay
-        self.instructions = []
-        with open(needle_path, 'r') as f:
-            reader = csv.reader(f, delimiter="\t")
-            # reads list of key inputs
-            for pair in reader:
-                pair = pair[0].split(',')
-                key = pair[0]
-                length = float(pair[1])
-                self.instructions.append((key, length))
+        # if provided a file name
+        if fileName:
+            # placeholder pokecenter counter positions
+            self.pX, self.pY, self.pColor = 0, 0, (0,0,0)
+            # file paths for instructions
+            script_dir = os.path.dirname(__file__)
+            needle_path = os.path.join(
+                script_dir, 
+                'paths', 
+                fileName
+            )
+            # list of key presses and time delay
+            self.instructions = []
+            with open(needle_path, 'r') as f:
+                reader = csv.reader(f, delimiter="\t")
+                # reads list of key inputs
+                for pair in reader:
+                    pair = pair[0].split(',')
+                    key = pair[0]
+                    length = float(pair[1])
+                    self.instructions.append((key, length))
         
     
-    def holdKey(self, key: str, seconds:float = 1.0):
+    def holdKey(self, key: str, seconds: float = 1.0):
         """Holds a key down for specified number of seconds."""
         pydi.keyDown(key)
         time.sleep(seconds)
         pydi.keyUp(key)
         
     def pokecenter(self):
-        raise NotImplementedError('Not Implemented')
+        """Heals and leaves Pokecenters"""
+        # healing at pokecenter
+        pydi.keyDown('z')
+        pydi.keyDown('down')
+        time.sleep(0.5) # delay to ensure healing starts
+        # heal until leaving counter
+        while self.matchColor(self.pX, self.pY, self.pColor):
+            time.sleep(0.2)
+        pydi.keyUp('z')
+        # leaving pokecenter
+        while self.matchColor(5,815,(0,0,0)):
+            time.sleep(0.2)
+        pydi.keyUp('down')
+        time.sleep(0.5) # delay to fully leave transition scene
+        # outside + bike
+        pydi.press('1')
+    
+    def leave(self):
+        """Leaves hunting location to where teleport is possible."""
+        # teleport
+        pydi.press('v')
+        # sleep until pokecenter counter is visible
+        while not self.matchColor(self.pX, self.pY, self.pColor):
+            time.sleep(0.2)
         
     def toLocation(self):
         """Follows the list of instructions to farming location."""
@@ -65,13 +85,17 @@ class Base:
             else:
                 time.sleep(length)
             
+    def matchColor(self, x: int, y: int, color: tuple) -> bool:
+        """Checks if color is present on screen."""
+        return pyag.pixelMatchesColor(x,y, color, tolerance=5)
+
     def isInBattle(self) -> bool:
         """Checks if battle UI is on the screen."""
-        return pyag.pixelMatchesColor(287,725, (166, 105, 219), tolerance=5)
+        return self.matchColor(287,725, (165, 104, 217))
 
     def isBattleReady(self) -> bool:
         """Checks if battle UI is ready."""
-        return pyag.pixelMatchesColor(502,763, (165, 104, 217), tolerance=5)
+        return self.matchColor(502,763, (165, 104, 217))
 
     def isShiny(self):
         """Checks if encounter contains a shiny Pokemon."""
@@ -90,7 +114,7 @@ class Base:
         pydi.press('z')
         # waits until UI fully fades due to lag
         while self.isInBattle():
-            time.sleep(0.3)
+            time.sleep(0.2)
         
     def stall(self):
         """Stalls for time if user is AFK when shiny is found so user does not
@@ -111,7 +135,7 @@ class Base:
         # checks if battle UI has started
         if self.isInBattle():
             while not self.isBattleReady():
-                time.sleep(0.5)
+                time.sleep(0.2)
             # takes action when battle loads
             if not self.isShiny():
                 self.unwantedEncounter()
@@ -142,36 +166,25 @@ class Base:
         self.accidentalEncounter()
         for i in range(6):
             self.horde()
-        # teleport
-        pydi.press('v')
-        time.sleep(4)
+        self.leave()
+
+class Gen3(Base):
+    def __init__(self, fileName):
+        super().__init__(fileName)
+        self.pX = 980
+        self.pY = 437
+        self.pColor = (176,176,160)
         
-class Hoenn(Base):
-    def pokecenter(self):
-        # healing at pokecenter
-        self.holdKey('z', 0.9)
-        # leaving pokecenter
-        self.holdKey('down', 1.3)
-        time.sleep(1)
-        # outside + bike
-        pydi.press('1')
-        
-class Sinnoh(Base):
-    def pokecenter(self):
-        # healing at pokecenter
-        self.holdKey('z', 4) 
-        # leaving pokecenter
-        self.holdKey('down', 2)
-        time.sleep(0.5)
-        # outside + bike
-        pydi.press('1')
-        
-class Unova(Base):
-    def pokecenter(self):
-        # healing at pokecenter
-        self.holdKey('z', 4.5)
-        # leaving pokecenter
-        self.holdKey('down', 2.5)
-        time.sleep(0.5)
-        # outside + bike
-        pydi.press('1')
+class Gen4(Base):
+    def __init__(self, fileName):
+        super().__init__(fileName)
+        self.pX = 980
+        self.pY = 436
+        self.pColor = (224, 221, 224)
+
+class Gen5(Base):
+    def __init__(self, fileName):
+        super().__init__(fileName)
+        self.pX = 1203
+        self.pY = 507
+        self.pColor = (158,71,60)

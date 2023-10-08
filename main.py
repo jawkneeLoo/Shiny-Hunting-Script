@@ -3,12 +3,12 @@ import specialEncounter
 import time
 
 def main():
-    #task = specialEncounter.grindHoenn('bfEXP.csv')
-    #task = specialEncounter.grindUnova('rapidashSpdEV.csv')
-    #task = specialEncounter.grindSinnoh('rhydonAtkEV.csv')
-    #task = base.Unova('vanillish.csv')
+    #task = specialEncounter.grindGen3('bfEXP.csv')
+    #task = specialEncounter.grindGen4('rhydonAtkEV.csv')
+    #task = specialEncounter.grindGen5('rapidashSpdEV.csv')
+    #task = base.Gen5('vanillish.csv')
     task = specialEncounter.Deino()
-    #task = specialEnqcounter.legendaryDog()
+    #task = specialEncounter.legendaryDog()
 
     print('Script starting in 1 second...')
     time.sleep(1)
