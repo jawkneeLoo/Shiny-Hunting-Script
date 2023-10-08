@@ -13,14 +13,16 @@ class grindGen5(base.Gen5):
         pydi.press('c')
         # checks if UI is on screen to confirm battle is not lagging
         while not self.isBattleReady():
-            time.sleep(0.5)
+            time.sleep(0.2)
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
             for i in range(3):
                 pydi.press('z')
             #enough time for EXP gain + level up text
-            time.sleep(10)
+            while self.isInBattle():
+                time.sleep(0.2)
+            time.sleep(1)
         else:
             print('Shiny detected!')
             self.stall()
@@ -34,14 +36,16 @@ class grindGen4(base.Gen4):
         pydi.press('c')
         # checks if UI is on screen to confirm battle is not lagging
         while not self.isBattleReady():
-            time.sleep(0.5)
+            time.sleep(0.2)
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
             for i in range(3):
                 pydi.press('z')
             #enough time for EXP gain + level up text
-            time.sleep(10)
+            while self.isInBattle():
+                time.sleep(0.2)
+            time.sleep(1)
         else:
             print('Shiny detected!')
             self.stall()
@@ -84,11 +88,13 @@ class grindGen3(base.Gen3):
 class Deino(base.Gen5):
     def __init__(self):
         super().__init__('deino.csv')
+        # victory road color difference
+        self.pColor = (158,71,60)
 
     def leave(self):
         # leave cave
         self.holdKey('down', 0.3)
-        while not self.matchColor(5,815,(0,0,0)):
+        while self.matchColor(5,815,(0,0,0)):
             time.sleep(0.2)
         time.sleep(1)
         # teleport

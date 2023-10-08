@@ -187,4 +187,4 @@ class Gen5(Base):
         super().__init__(fileName)
         self.pX = 1203
         self.pY = 507
-        self.pColor = (158,71,60)
+        self.pColor = (183, 71, 54)

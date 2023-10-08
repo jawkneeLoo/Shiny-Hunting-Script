@@ -5,9 +5,9 @@ import time
 def main():
     #task = specialEncounter.grindGen3('bfEXP.csv')
     #task = specialEncounter.grindGen4('rhydonAtkEV.csv')
-    #task = specialEncounter.grindGen5('rapidashSpdEV.csv')
+    task = specialEncounter.grindGen5('rapidashSpdEV.csv')
     #task = base.Gen5('vanillish.csv')
-    task = specialEncounter.Deino()
+    #task = specialEncounter.Deino()
     #task = specialEncounter.legendaryDog()
 
     print('Script starting in 1 second...')
