@@ -11,9 +11,6 @@ class Base:
 
     def __init__(self, fileName: str = None):
         pyag.FAILSAFE = False
-        # clicks into game window
-        pyag.moveTo(100,100)
-        pyag.click()
         # OCR reader
         self.reader = easyocr.Reader(['en'], detector=False)
         # if provided a file name

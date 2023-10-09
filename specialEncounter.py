@@ -2,6 +2,7 @@ import base
 import numpy as np
 import pyautogui as pyag
 import pydirectinput as pydi
+import re
 import time
 
 class grindGen5(base.Gen5):
@@ -85,6 +86,78 @@ class grindGen3(base.Gen3):
             print('Shiny detected!')
             self.stall()
 
+class Payday(base.Gen5):
+    def __init__(self, fileName: str):
+        super().__init__(fileName)
+
+    def isShiny(self) -> bool:
+        """Checks if single encounter contains a shiny Pokemon."""
+        # Pokemon name regions
+        img = np.array(pyag.screenshot(region = (300,148,300,25)))
+        text = self.reader.recognize(img,detail=0)[0]
+        return 'shiny' in text.lower()
+    
+    def hasPP(self) -> bool:
+        """Checks if first move still have PP."""
+        img = pyag.screenshot(region=(1495,825,57,15))
+        pp = self.reader.recognize(np.array(img),detail=0)[0]
+        pp = re.search('\d+', pp).group()
+        return int(pp) > 0
+        
+    def fish(self):
+        """Fishes until a successful encounter."""
+        encounter = False
+        # while fishing isn't successful
+        while not encounter:
+            # fish
+            pydi.press('shiftleft')
+            # wait for fishing dialogue
+            while not self.matchColor(1362,212,(251, 251, 251)):
+                time.sleep(0.2)
+            # check if successful fish
+            if self.matchColor(562,154,(251, 251, 251)):
+                encounter = True
+            # dismiss dialogue
+            pydi.press('z')
+    
+    def battle(self):
+        # checks if UI is on screen to confirm battle is not lagging
+        while not self.isBattleReady():
+            time.sleep(0.2)
+        # takes action when battle loads
+        if not self.isShiny():
+            #attack with payday
+            for i in range(2):
+                pydi.press('z')
+            # waits until UI fully fades due to lag
+            while self.isInBattle():
+                time.sleep(0.2)
+        else:
+            print('Shiny detected!')
+            self.stall()
+
+    def leave(self):
+        # leave bridge
+        pydi.press('1')
+        self.holdKey('down', 1)
+        # checks for lag during transition
+        while not self.matchColor(900,415,(44, 44, 64)):
+            time.sleep(0.2)
+        pydi.press('v')
+        # sleep until pokecenter counter is visible
+        while not self.matchColor(self.pX, self.pY, self.pColor):
+            time.sleep(0.2)
+
+    def hunt(self):
+        """Overall method for healing, pathing, and grinding."""
+        self.pokecenter()
+        # route to grinding location
+        self.toLocation()
+        while self.hasPP():
+            self.fish()
+            self.battle()
+        self.leave()
+
 class Deino(base.Gen5):
     def __init__(self):
         super().__init__('deino.csv')
@@ -117,8 +190,7 @@ class Litwick(base.Gen5):
         while not self.matchColor(self.pX, self.pY, self.pColor):
             time.sleep(0.2)
 
-
-class legendaryDog(base.Gen3):
+class LegendaryDog(base.Gen3):
     def __init__(self):
         # random file name
         self.toCheck = ['shiny', 'entei', 'suicune', 'raikou']
