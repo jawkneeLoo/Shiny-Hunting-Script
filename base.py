@@ -10,7 +10,6 @@ class Base:
     """A class used to represent the base functions of grinding."""
 
     def __init__(self, fileName: str = None):
-        pyag.FAILSAFE = False
         # OCR reader
         self.reader = easyocr.Reader(['en'], detector=False)
         # if provided a file name
@@ -34,7 +33,6 @@ class Base:
                     key = pair[0]
                     length = float(pair[1])
                     self.instructions.append((key, length))
-        
     
     def holdKey(self, key: str, seconds: float = 1.0):
         """Holds a key down for specified number of seconds."""
@@ -51,12 +49,14 @@ class Base:
         # heal until leaving counter
         while self.matchColor(self.pX, self.pY, self.pColor):
             time.sleep(0.2)
-        pydi.keyUp('z')
         # leaving pokecenter
-        while self.matchColor(5,815,(0,0,0)):
-            time.sleep(0.2)
+        inside = True
+        while inside:
+            time.sleep(0.1)
+            inside = self.matchColor(5,815,(0,0,0))
+        pydi.keyUp('z')
         pydi.keyUp('down')
-        time.sleep(0.5) # delay to fully leave transition scene
+        time.sleep(0.3) # delay to fully leave transition scene
         # outside + bike
         pydi.press('1')
     
@@ -84,7 +84,7 @@ class Base:
             
     def matchColor(self, x: int, y: int, color: tuple) -> bool:
         """Checks if color is present on screen."""
-        return pyag.pixelMatchesColor(x,y, color, tolerance=5)
+        return pyag.pixelMatchesColor(x,y, color, tolerance=15)
 
     def isInBattle(self) -> bool:
         """Checks if battle UI is on the screen."""

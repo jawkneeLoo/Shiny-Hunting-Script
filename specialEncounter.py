@@ -20,10 +20,9 @@ class grindGen5(base.Gen5):
             #attack horde with AOE
             for i in range(3):
                 pydi.press('z')
-            #enough time for EXP gain + level up text
+            # waits until UI fully fades due to lag
             while self.isInBattle():
                 time.sleep(0.2)
-            time.sleep(1)
         else:
             print('Shiny detected!')
             self.stall()
@@ -43,10 +42,9 @@ class grindGen4(base.Gen4):
             #attack horde with AOE
             for i in range(3):
                 pydi.press('z')
-            #enough time for EXP gain + level up text
+            # waits until UI fully fades due to lag
             while self.isInBattle():
                 time.sleep(0.2)
-            time.sleep(1)
         else:
             print('Shiny detected!')
             self.stall()
@@ -74,14 +72,15 @@ class grindGen3(base.Gen3):
         pydi.press('c')
         # checks if UI is on screen to confirm battle is not lagging
         while not self.isBattleReady():
-            time.sleep(0.3)
+            time.sleep(0.2)
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
             for i in range(3):
                 pydi.press('z')
-            #enough time for EXP gain + level up text
-            time.sleep(10)
+            # waits until UI fully fades due to lag
+            while self.isInBattle():
+                time.sleep(0.2)
         else:
             print('Shiny detected!')
             self.stall()
@@ -135,24 +134,27 @@ class Payday(base.Gen5):
         else:
             print('Shiny detected!')
             self.stall()
-
+    """
     def leave(self):
         # leave bridge
         pydi.press('1')
         self.holdKey('down', 1)
         # checks for lag during transition
-        while not self.matchColor(900,415,(44, 44, 64)):
+        while self.matchColor(900,415,(251, 251, 251)):
             time.sleep(0.2)
+        time.sleep(1)
         pydi.press('v')
         # sleep until pokecenter counter is visible
         while not self.matchColor(self.pX, self.pY, self.pColor):
             time.sleep(0.2)
-
+    """
     def hunt(self):
         """Overall method for healing, pathing, and grinding."""
-        self.pokecenter()
-        # route to grinding location
-        self.toLocation()
+        if self.matchColor(self.pX, self.pY, self.pColor):
+            # heals and leaves
+            self.pokecenter()
+            # route to grinding location
+            self.toLocation()
         while self.hasPP():
             self.fish()
             self.battle()

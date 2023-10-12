@@ -1,16 +1,16 @@
 import base
-import specialEncounter
+import specialEncounter as SE
 import time
 
 def main():
-    #task = specialEncounter.grindGen3('bfEXP.csv')
-    #task = specialEncounter.grindGen4('rhydonAtkEV.csv')
-    #task = specialEncounter.grindGen5('rapidashSpdEV.csv')
+    #task = SE.grindGen3('bfEXP.csv')
+    #task = SE.grindGen4('rhydonAtkEV.csv')
+    #task = SE.grindGen5('rapidashSpdEV.csv')
     #task = base.Gen5('vanillish.csv')
-    #task = specialEncounter.Deino()
-    #task = specialEncounter.LegendaryDog()
-    task = specialEncounter.Payday('dragonspiral.csv')
-
+    #task = SE.Deino()
+    #task = SE.LegendaryDog()
+    task = SE.Payday('undellaBay.csv')
+    
     print('Script starting in 1 second...')
     time.sleep(1)
     print('Started')
