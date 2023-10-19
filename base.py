@@ -5,6 +5,7 @@ import os
 import pyautogui as pyag
 import pydirectinput as pydi
 import time
+from typing import Tuple
 
 class Base:
     """A class used to represent the base functions of grinding."""
@@ -39,21 +40,28 @@ class Base:
         pydi.keyDown(key)
         time.sleep(seconds)
         pydi.keyUp(key)
-        
+
+    def holdKeyUntil(self, key: str, x: int, y: int, \
+                     color: Tuple[int, int, int], opposite = True):
+        """Holds a key down until pixel color is satisfied."""
+        pydi.keyDown(key)
+        if opposite:
+            while not self.matchColor(x, y, color):
+                time.sleep(0.05)
+        else:
+            while self.matchColor(x, y, color):
+                time.sleep(0.05)
+        pydi.keyUp(key)
+             
     def pokecenter(self):
         """Heals and leaves Pokecenters"""
         # healing at pokecenter
         pydi.keyDown('z')
         pydi.keyDown('down')
         time.sleep(0.5) # delay to ensure healing starts
-        # heal until leaving counter
-        while self.matchColor(self.pX, self.pY, self.pColor):
-            time.sleep(0.2)
         # leaving pokecenter
-        inside = True
-        while inside:
-            time.sleep(0.1)
-            inside = self.matchColor(5,815,(0,0,0))
+        while self.matchColor(5,815,(0,0,0)):
+            time.sleep(0.01)
         pydi.keyUp('z')
         pydi.keyUp('down')
         time.sleep(0.3) # delay to fully leave transition scene
@@ -82,13 +90,19 @@ class Base:
             else:
                 time.sleep(length)
             
-    def matchColor(self, x: int, y: int, color: tuple) -> bool:
+    def matchColor(self, x: int, y: int, color: Tuple[int, int, int]) -> bool:
         """Checks if color is present on screen."""
         return pyag.pixelMatchesColor(x,y, color, tolerance=15)
 
     def isInBattle(self) -> bool:
         """Checks if battle UI is on the screen."""
         return self.matchColor(287,725, (165, 104, 217))
+    
+    def isHPVisible(self) -> bool:
+        """Checks if encounter HP is on the screen."""
+        horde = self.matchColor(590, 130, (128, 220, 37))
+        single = self.matchColor(320, 180, (128, 220, 37))
+        return horde or single
 
     def isBattleReady(self) -> bool:
         """Checks if battle UI is ready."""
@@ -107,7 +121,8 @@ class Base:
             
     def unwantedEncounter(self):
         """Runs from unwanted encounters."""
-        self.holdKey('right', 0.5)
+        pydi.press('right')
+        pydi.press('down')
         pydi.press('z')
         # waits until UI fully fades due to lag
         while self.isInBattle():
@@ -125,16 +140,21 @@ class Base:
             # prints how many minutes
             length = length + 2
             print(length)
-    
+
     def accidentalEncounter(self):
         """Checks if horde is encountered upon entering location."""
         time.sleep(2.5)
         # checks if battle UI has started
         if self.isInBattle():
+            # wait for HP to appear and then read names
+            while not self.isHPVisible():
+                time.sleep(0.2)
+            shiny = self.isShiny()
+            # checks if UI is on screen to confirm battle is not lagging
             while not self.isBattleReady():
                 time.sleep(0.2)
             # takes action when battle loads
-            if not self.isShiny():
+            if not shiny:
                 self.unwantedEncounter()
             else:
                 print('Shiny detected!')
@@ -144,23 +164,31 @@ class Base:
         """Automates Pokemon horde encounters."""
         # uses sweet scent to start horde fight
         pydi.press('c')
+        # wait for HP to appear and then read names
+        while not self.isHPVisible():
+            time.sleep(0.2)
+        shiny = self.isShiny()
         # checks if UI is on screen to confirm battle is not lagging
         while not self.isBattleReady():
-            time.sleep(0.3)
+            time.sleep(0.2)
         # takes action when battle loads
-        if not self.isShiny():
+        if not shiny:
             self.unwantedEncounter()
         else:
             print('Shiny detected!')
             self.stall()
 
-    def hunt(self):
+    def hunt(self, accident = True):
         """Overall method for healing, pathing, and grinding."""
-        self.pokecenter()
-        # route to grinding location
-        self.toLocation()
+        # checks for pokecenter counter
+        if self.matchColor(self.pX, self.pY, self.pColor):
+            # heals and leaves
+            self.pokecenter()
+            # route to grinding location
+            self.toLocation()
         # check if entering location enters battle
-        self.accidentalEncounter()
+        if accident:
+            self.accidentalEncounter()
         for i in range(6):
             self.horde()
         self.leave()

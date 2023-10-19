@@ -18,8 +18,7 @@ class grindGen5(base.Gen5):
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
-            for i in range(3):
-                pydi.press('z')
+            pydi.press('z', presses = 3)
             # waits until UI fully fades due to lag
             while self.isInBattle():
                 time.sleep(0.2)
@@ -40,8 +39,7 @@ class grindGen4(base.Gen4):
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
-            for i in range(3):
-                pydi.press('z')
+            pydi.press('z', presses = 3)
             # waits until UI fully fades due to lag
             while self.isInBattle():
                 time.sleep(0.2)
@@ -76,8 +74,7 @@ class grindGen3(base.Gen3):
         # takes action when battle loads
         if not self.isShiny():
             #attack horde with AOE
-            for i in range(3):
-                pydi.press('z')
+            pydi.press('z', presses = 3)
             # waits until UI fully fades due to lag
             while self.isInBattle():
                 time.sleep(0.2)
@@ -125,10 +122,7 @@ class Payday(base.Gen5):
             time.sleep(0.2)
         # takes action when battle loads
         if not self.isShiny():
-            #attack with payday
-            for i in range(2):
-                pydi.press('z')
-            # waits until UI fully fades due to lag
+            pydi.press('z', presses = 2)
             while self.isInBattle():
                 time.sleep(0.2)
         else:
@@ -163,34 +157,46 @@ class Payday(base.Gen5):
 class Deino(base.Gen5):
     def __init__(self):
         super().__init__('deino.csv')
-        # victory road color difference
-        self.pColor = (158,71,60)
+
+    def toLocation(self):
+        super(Deino, self).toLocation()
+        self.holdKeyUntil('up', 5,815,(0,0,0))
+        time.sleep(0.5)
 
     def leave(self):
         # leave cave
-        self.holdKey('down', 0.3)
-        while self.matchColor(5,815,(0,0,0)):
-            time.sleep(0.2)
+        self.holdKeyUntil('down', 5,815,(0,0,0))
         time.sleep(1)
         # teleport
-        pydi.press('v')
-        # sleep until pokecenter counter is visible
-        while not self.matchColor(self.pX, self.pY, self.pColor):
-            time.sleep(0.2)
+        super(Deino, self).leave()
+
+    def hunt(self):
+        super(Deino, self,).hunt(False)
 
 class Litwick(base.Gen5):
     def __init__(self):
         super().__init__('litwick.csv')
 
     def leave(self):
-        # teleport
-        self.holdKey('right', 6)
-        self.holdKey('down', 1)
-        time.sleep(1)
-        pydi.press('v')
-        # sleep until pokecenter counter is visible
-        while not self.matchColor(self.pX, self.pY, self.pColor):
-            time.sleep(0.2)
+        # leave tower
+        self.holdKeyUntil('right', 1000, 780, (242, 242, 242))
+        self.holdKeyUntil('down', 5, 815, (0,0,0), opposite=False)
+        time.sleep(0.5)
+        super(Litwick, self).leave()
+        
+    def toLocation(self):
+        """Follows the list of instructions to farming location."""
+        super(Litwick, self).toLocation()
+        # go up stairs
+        self.holdKeyUntil('left', 1700, 125, (0, 0, 0))
+        time.sleep(0.5)
+
+    def hunt(self):
+        """Overall method for healing, pathing, and grinding."""
+        super(Litwick, self,).hunt(False)
+    
+    def debug(self):
+        self.holdKeyUntil('right', 1273, 481, (58, 132, 189))
 
 class LegendaryDog(base.Gen3):
     def __init__(self):
