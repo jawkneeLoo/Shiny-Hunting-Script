@@ -44,13 +44,19 @@ class Base:
     def holdKeyUntil(self, key: str, x: int, y: int, \
                      color: Tuple[int, int, int], opposite = True):
         """Holds a key down until pixel color is satisfied."""
+        # TODO implement opposite as holdKeyWhile
         pydi.keyDown(key)
-        if opposite:
-            while not self.matchColor(x, y, color):
-                time.sleep(0.05)
-        else:
-            while self.matchColor(x, y, color):
-                time.sleep(0.05)
+        while not self.matchColor(x, y, color):
+            time.sleep(0.05)
+        pydi.keyUp(key)
+
+    def holdKeyWhile(self, key: str, x: int, y: int, \
+                     color: Tuple[int, int, int], opposite = True):
+        """Holds a key down while pixel color is satisfied."""
+        # TODO implement opposite as holdKeyWhile
+        pydi.keyDown(key)
+        while self.matchColor(x, y, color):
+            time.sleep(0.05)
         pydi.keyUp(key)
              
     def pokecenter(self):

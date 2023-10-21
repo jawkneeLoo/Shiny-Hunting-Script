@@ -7,10 +7,11 @@ def main():
     #task = SE.grindGen3('spatkEV.csv')
     #task = SE.grindGen4('rhydonAtkEV.csv')
     #task = SE.grindGen5('rapidashSpdEV.csv')
-    task = base.Gen3('magikarp.csv')
+    #task = base.Gen3('magikarp.csv')
     #task = SE.LegendaryDog()
     #task = SE.Payday('undellaBay.csv')
-    #task = SE.Deino()
+    #task = SE.Thief('evergrande.csv')
+    task = SE.Ursaring()
 
     print('Script starting in 1 second...')
     time.sleep(1)

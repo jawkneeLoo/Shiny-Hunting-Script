@@ -82,6 +82,84 @@ class grindGen3(base.Gen3):
             print('Shiny detected!')
             self.stall()
 
+class Thief(base.Gen3):
+    def __init__(self, fileName: str):
+        super().__init__(fileName)
+
+    def isShiny(self) -> int:
+        """Checks if single encounter contains a shiny Pokemon."""
+        # Pokemon name regions
+        img = np.array(pyag.screenshot(region = (300,148,300,25)))
+        text = self.reader.recognize(img,detail=0)[0]
+        return 'shiny' in text.lower()
+        
+    def hasPP(self) -> bool:
+        """Checks if first move still has PP."""
+        img = pyag.screenshot(region=(1495,825,57,15))
+        pp = self.reader.recognize(np.array(img),detail=0)[0]
+        pp = re.search('\d+', pp).group()
+        return int(pp) > 0
+    
+    def fish(self):
+        """Fishes until a successful encounter."""
+        encounter = False
+        # while fishing isn't successful
+        while not encounter:
+            # fish
+            pydi.press('shiftleft')
+            # wait for fishing dialogue
+            while not self.matchColor(1362,212,(251, 251, 251)):
+                time.sleep(0.2)
+            # check if successful fish
+            if self.matchColor(562,154,(251, 251, 251)):
+                encounter = True
+            # dismiss dialogue
+            pydi.press('z')
+    
+    def takeItem(self):
+        #self.matchColor(1902, 436, (79, 173, 24))
+        pydi.moveTo(1902, 436)
+        pydi.click()
+        pydi.moveTo(1820, 490)
+        pydi.click()
+
+    def battle(self):
+        # checks if UI is on screen to confirm battle is not lagging
+        item = self.matchColor(501, 582, (165, 104, 217))
+        battle = self.isBattleReady()
+        # wait until battle UI appears
+        while not battle:
+            time.sleep(0.05)
+            # if item isn't detected
+            if not item:
+                item = self.matchColor(501, 582, (165, 104, 217))
+            battle = self.isBattleReady()
+        # takes action when battle loads
+        if not self.isShiny():
+            # if item is found
+            if item:
+                pydi.press('z', presses = 2)
+                while self.isInBattle():
+                    time.sleep(0.2)
+                self.takeItem()
+            else:
+                self.unwantedEncounter()
+        else:
+            print('Shiny detected!')
+            self.stall()
+
+    def hunt(self):
+        """Overall method for healing, pathing, and grinding."""
+        if self.matchColor(self.pX, self.pY, self.pColor):
+            # heals and leaves
+            self.pokecenter()
+            # route to grinding location
+            self.toLocation()
+        while self.hasPP():
+            self.fish()
+            self.battle()
+        self.leave()
+
 class Payday(base.Gen5):
     def __init__(self, fileName: str):
         super().__init__(fileName)
@@ -92,9 +170,9 @@ class Payday(base.Gen5):
         img = np.array(pyag.screenshot(region = (300,148,300,25)))
         text = self.reader.recognize(img,detail=0)[0]
         return 'shiny' in text.lower()
-    
+
     def hasPP(self) -> bool:
-        """Checks if first move still have PP."""
+        """Checks if first move still has PP."""
         img = pyag.screenshot(region=(1495,825,57,15))
         pp = self.reader.recognize(np.array(img),detail=0)[0]
         pp = re.search('\d+', pp).group()
@@ -142,6 +220,7 @@ class Payday(base.Gen5):
         while not self.matchColor(self.pX, self.pY, self.pColor):
             time.sleep(0.2)
     """
+
     def hunt(self):
         """Overall method for healing, pathing, and grinding."""
         if self.matchColor(self.pX, self.pY, self.pColor):
@@ -180,7 +259,7 @@ class Litwick(base.Gen5):
     def leave(self):
         # leave tower
         self.holdKeyUntil('right', 1000, 780, (242, 242, 242))
-        self.holdKeyUntil('down', 5, 815, (0,0,0), opposite=False)
+        self.holdKeyWhile('down', 5, 815, (0,0,0))
         time.sleep(0.5)
         super(Litwick, self).leave()
         
@@ -197,6 +276,26 @@ class Litwick(base.Gen5):
     
     def debug(self):
         self.holdKeyUntil('right', 1273, 481, (58, 132, 189))
+
+class Ursaring(base.Gen4):
+    def __init__(self):
+        super().__init__('ursaring.csv')
+
+    def toLocation(self):
+        super(Ursaring, self).toLocation()
+        self.holdKeyUntil('up', 5,815,(0,0,0))
+        time.sleep(1)
+        self.holdKeyWhile('up', 955, 1050, (0,0,0))
+        self.holdKeyUntil('up', 955, 1050, (0,0,0))
+        time.sleep(2)
+        pydi.press('up')
+
+    def leave(self):
+        # leave cave
+        self.holdKeyWhile('down', 5,815,(0,0,0))
+        time.sleep(1)
+        # teleport
+        super(Ursaring, self).leave()
 
 class LegendaryDog(base.Gen3):
     def __init__(self):
