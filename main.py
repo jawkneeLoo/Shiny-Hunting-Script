@@ -1,15 +1,14 @@
 import base
-import specialEncounter as SE
+import specialEncounter as se
 import time
+from pydirectinput import FailSafeException
 
 def main():
-    #task = SE.grindGen3('bfEXP.csv')
-    #task = SE.grindGen4('atkEV.csv')
-    #task = SE.grindGen5('spdEV.csv')
+    task = base.GrindGen5('spdEV.csv')
     #task = base.Gen3('magikarp.csv')
     #task = SE.LegendaryDog()
     #task = SE.Payday('undellaBay.csv')
-    task = SE.Thief('evergrande.csv')
+    #task = SE.Thief('evergrande.csv')
     #task = SE.Ursaring()
 
     print('Script starting in 1 second...')
@@ -17,7 +16,10 @@ def main():
     print('Started')
     #loops hunting until ended
     while True:
-        task.hunt()
+        try:
+            task.hunt()
+        except FailSafeException:
+            task.sct.close()
 
 if __name__ == '__main__':
     main()

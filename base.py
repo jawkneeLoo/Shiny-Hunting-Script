@@ -1,9 +1,9 @@
 import csv
-import easyocr
+from mss.windows import MSS as mss
 import numpy as np
 import os
-import pyautogui as pyag
 import pydirectinput as pydi
+from rapidocr import RapidOCR
 import time
 from typing import Tuple
 
@@ -11,8 +11,10 @@ class Base:
     """A class used to represent the base functions of grinding."""
 
     def __init__(self, fileName: str = None):
+        # screen capture tool
+        self.sct = mss()
         # OCR reader
-        self.reader = easyocr.Reader(['en'], detector=False)
+        self.reader = RapidOCR()
         # if provided a file name
         if fileName:
             # placeholder pokecenter counter positions
@@ -34,14 +36,29 @@ class Base:
                     key = pair[0]
                     length = float(pair[1])
                     self.instructions.append((key, length))
-    
-    def holdKey(self, key: str, seconds: float = 1.0):
+
+    def matchColor(self, x: int, y: int, color: Tuple[int, int, int]) -> bool:
+        """Checks if color is present on screen."""
+        region = {
+            "left": x,
+            "top": y,
+            "width": 1,
+            "height": 1,
+            "mon": 1,
+        }
+        sct_img = self.sct.grab(region)
+        pixel = sct_img.pixel(0, 0)
+        dist = sum(map(lambda x, y: abs(x - y), color, pixel))
+        return dist < 25
+
+    @staticmethod
+    def holdKey(key: str, seconds: float = 1.0):
         """Holds a key down for specified number of seconds."""
         pydi.keyDown(key)
         time.sleep(seconds)
         pydi.keyUp(key)
 
-    def holdKeyUntil(self, key: str, x: int, y: int, \
+    def holdKeyUntil(self, key: str, x: int, y: int,
                      color: Tuple[int, int, int]):
         """Holds a key down until pixel color is satisfied."""
         pydi.keyDown(key)
@@ -49,20 +66,28 @@ class Base:
             time.sleep(0.05)
         pydi.keyUp(key)
 
-    def holdKeyWhile(self, key: str, x: int, y: int, \
+    def holdKeyWhile(self, key: str, x: int, y: int,
                      color: Tuple[int, int, int]):
         """Holds a key down while pixel color is satisfied."""
         pydi.keyDown(key)
         while self.matchColor(x, y, color):
             time.sleep(0.05)
         pydi.keyUp(key)
+
+    def teleportToPokecenter(self):
+        """Leaves hunting location to where teleport is possible."""
+        # teleport
+        pydi.press('v')
+        # sleep until pokecenter counter is visible
+        while not self.matchColor(self.pX, self.pY, self.pColor):
+            time.sleep(0.2)
              
     def pokecenter(self):
         """Heals and leaves Pokecenters"""
         # healing at pokecenter
         pydi.keyDown('z')
-        pydi.keyDown('down')
         time.sleep(0.5) # delay to ensure healing starts
+        pydi.keyDown('down')
         # leaving pokecenter
         while self.matchColor(5,815,(0,0,0)):
             time.sleep(0.01)
@@ -71,68 +96,59 @@ class Base:
         time.sleep(0.3) # delay to fully leave transition scene
         # outside + bike
         pydi.press('1')
-    
-    def leave(self):
-        """Leaves hunting location to where teleport is possible."""
-        # teleport
-        pydi.press('v')
-        # sleep until pokecenter counter is visible
-        while not self.matchColor(self.pX, self.pY, self.pColor):
-            time.sleep(0.2)
         
     def toLocation(self):
         """Follows the list of instructions to farming location."""
         for key, length in self.instructions:
             # move mouse to coords (key, value)
             if key.isdigit() and (int(key) > 10):
-                pyag.moveTo(int(key), int(length))
+                pydi.moveTo(int(key), int(length))
             elif key == 'click':
                 pydi.click()
             # normal key input
             elif key != 'sleep':
-                self.holdKey(key, length)
+                Base.holdKey(key, length)
             else:
                 time.sleep(length)
-            
-    def matchColor(self, x: int, y: int, color: Tuple[int, int, int]) -> bool:
-        """Checks if color is present on screen."""
-        return pyag.pixelMatchesColor(x,y, color, tolerance=15)
 
     def isInBattle(self) -> bool:
         """Checks if battle UI is on the screen."""
-        return self.matchColor(287,725, (165, 104, 217))
+        return self.matchColor(383,975, (165, 104, 217))
     
     def isHPVisible(self) -> bool:
         """Checks if encounter HP is on the screen."""
-        horde = self.matchColor(590, 130, (128, 220, 37))
-        single = self.matchColor(320, 180, (128, 220, 37))
+        horde = self.matchColor(895, 105, (128, 220, 37))
+        single = self.matchColor(415, 155, (128, 220, 37))
         return horde or single
 
     def isBattleReady(self) -> bool:
-        """Checks if battle UI is ready."""
-        return self.matchColor(502,763, (165, 104, 217))
+        """Checks if battle selection UI is ready."""
+        return self.matchColor(395,1015, (165, 104, 217))
 
     def isShiny(self):
         """Checks if encounter contains a shiny Pokemon."""
         # Pokemon name regions
-        regions = [(300,148,300,25), (530,98,820,25), (530,138,820,25)]
+        regions = [{"left": 410, "top": 120, "width": 250, "height": 25, "mon": 1},
+            {"left": 880, "top": 75, "width": 820, "height": 25, "mon": 1},
+            {"left": 880, "top": 115, "width": 820, "height": 25, "mon": 1}]
         text = ''
         for r in regions:
-            img = np.array(pyag.screenshot(region=r))
-            text += self.reader.recognize(img,detail=0)[0]
+            sct_img = self.sct.grab(r)
+            img = np.array(sct_img)
+            result = self.reader(img)
+            if result.txts: # if OCR reads anything
+                text += ' '.join(result.txts)
         print(text)
         return 'shiny' in text.lower()
             
-    def unwantedEncounter(self):
-        """Runs from unwanted encounters."""
+    def battleProcedure(self):
+        """Runs from unwanted encounters by default."""
         pydi.press('right')
         pydi.press('down')
         pydi.press('z')
-        # waits until UI fully fades due to lag
-        while self.isInBattle():
-            time.sleep(0.2)
-        
-    def stall(self):
+
+    @staticmethod
+    def stall():
         """Stalls for time if user is AFK when shiny is found so user does not
         time out from being AFK. Moves left or right once every minute."""
         length = 0
@@ -145,75 +161,93 @@ class Base:
             length = length + 2
             print(length)
 
+    def encounterProcedure(self):
+        """Contains logic for how to handle an encounter"""
+        # wait for HP to appear and then read names
+        while not self.isHPVisible():
+            time.sleep(0.05)
+        shiny = self.isShiny()
+        # checks if UI is on screen to confirm battle is not lagging
+        while not self.isBattleReady():
+            time.sleep(0.05)
+        # takes action when battle loads
+        if not shiny:
+            self.battleProcedure()
+            # waits until UI fully fades due to lag
+            while self.isInBattle():
+                time.sleep(0.1)
+        else:
+            print('Shiny detected!')
+            self.stall()
+
     def accidentalEncounter(self):
         """Checks if horde is encountered upon entering location."""
         time.sleep(2.5)
         # checks if battle UI has started
         if self.isInBattle():
-            # wait for HP to appear and then read names
-            while not self.isHPVisible():
-                time.sleep(0.2)
-            shiny = self.isShiny()
-            # checks if UI is on screen to confirm battle is not lagging
-            while not self.isBattleReady():
-                time.sleep(0.2)
-            # takes action when battle loads
-            if not shiny:
-                self.unwantedEncounter()
-            else:
-                print('Shiny detected!')
-                self.stall()
+            self.encounterProcedure()
     
     def horde(self):
         """Automates Pokemon horde encounters."""
         # uses sweet scent to start horde fight
         pydi.press('c')
-        # wait for HP to appear and then read names
-        while not self.isHPVisible():
-            time.sleep(0.2)
-        shiny = self.isShiny()
-        # checks if UI is on screen to confirm battle is not lagging
-        while not self.isBattleReady():
-            time.sleep(0.2)
-        # takes action when battle loads
-        if not shiny:
-            self.unwantedEncounter()
-        else:
-            print('Shiny detected!')
-            self.stall()
+        self.encounterProcedure()
 
     def hunt(self, accident = True):
         """Overall method for healing, pathing, and grinding."""
-        # checks for pokecenter counter
-        if self.matchColor(self.pX, self.pY, self.pColor):
-            # heals and leaves
-            self.pokecenter()
-            # route to grinding location
-            self.toLocation()
+        # if not at counter
+        if not self.matchColor(self.pX, self.pY, self.pColor):
+            self.teleportToPokecenter()
+        # heals and leaves
+        self.pokecenter()
+        # route to grinding location
+        self.toLocation()
         # check if entering location enters battle
         if accident:
             self.accidentalEncounter()
         for i in range(6):
             self.horde()
-        self.leave()
+        self.teleportToPokecenter()
+
+"""Basic functionality change classes"""
+class Grind(Base):
+    def __init__(self, fileName):
+        super().__init__(fileName)
+
+    def battleProcedure(self):
+        # attack horde with AOE
+        pydi.press('z', presses=3)
 
 class Gen3(Base):
     def __init__(self, fileName):
         super().__init__(fileName)
-        self.pX = 980
-        self.pY = 437
-        self.pColor = (176,176,160)
+        self.pX = 1085
+        self.pY = 557
+        self.pColor = (246, 127, 111)
         
 class Gen4(Base):
     def __init__(self, fileName):
         super().__init__(fileName)
-        self.pX = 980
-        self.pY = 436
+        self.pX = 970
+        self.pY = 510
         self.pColor = (224, 221, 224)
 
 class Gen5(Base):
     def __init__(self, fileName):
         super().__init__(fileName)
-        self.pX = 1203
-        self.pY = 507
-        self.pColor = (183, 71, 54)
+        self.pX = 1242
+        self.pY = 623
+        self.pColor = (243, 102, 180)
+
+"""Combination of classes"""
+class GrindGen5(Grind, Gen5):
+    def __init__(self, fileName):
+        super().__init__(fileName)
+
+class GrindGen4(Grind, Gen4):
+    def __init__(self, fileName):
+        super().__init__(fileName)
+
+class GrindGen3(Grind, Gen3):
+    def __init__(self, fileName):
+        super().__init__(fileName)
