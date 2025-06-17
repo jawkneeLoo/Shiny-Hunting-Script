@@ -4,12 +4,14 @@ import time
 from pydirectinput import FailSafeException
 
 def main():
-    task = base.GrindGen5('spdEV.csv')
-    #task = base.Gen3('magikarp.csv')
-    #task = SE.LegendaryDog()
-    #task = SE.Payday('undellaBay.csv')
-    #task = SE.Thief('evergrande.csv')
-    #task = SE.Ursaring()
+    #task = base.GrindGen3('bfEXP.csv')
+    task = base.GrindGen4('atkEV.csv')
+    # task = base.GrindGen5('spdEV.csv')
+    # task = base.Gen3('magikarp.csv')
+    # task = se.RoamingLegendary()
+    # task = se.Payday('dragonspiral.csv')
+    # task = se.Thief('evergrande.csv')
+    # task = se.Ursaring()
 
     print('Script starting in 1 second...')
     time.sleep(1)
@@ -18,7 +20,7 @@ def main():
     while True:
         try:
             task.hunt()
-        except FailSafeException:
+        except:
             task.sct.close()
 
 if __name__ == '__main__':

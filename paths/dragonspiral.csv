@@ -1,10 +1,10 @@
-left,0.35
+left,0.45
 up,2.2
-right,0.01
+right,0.1
 up,2
-left,0.01
+left,0.1
 up,1
 sleep,1
 up,0.6
-right,0.01
-1,0.01
+right,0.1
+1,0.1

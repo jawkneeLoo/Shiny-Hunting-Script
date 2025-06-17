@@ -4,6 +4,7 @@ import numpy as np
 import os
 import pydirectinput as pydi
 from rapidocr import RapidOCR
+import re
 import time
 from typing import Tuple
 
@@ -15,6 +16,15 @@ class Base:
         self.sct = mss()
         # OCR reader
         self.reader = RapidOCR()
+        # change sct regions based on monitor resolution
+        if self.sct.monitors[1]['height'] == 1440:
+            self.regions = [{"left": 410, "top": 120, "width": 280, "height": 30, "mon": 1},
+                {"left": 860, "top": 75, "width": 840, "height": 30, "mon": 1},
+                {"left": 860, "top": 115, "width": 840, "height": 30, "mon": 1}]
+        else:
+            self.regions = [{"left": 410, "top": 120, "width": 280, "height": 30, "mon": 1},
+                {"left": 860, "top": 75, "width": 840, "height": 30, "mon": 1},
+                {"left": 860, "top": 115, "width": 840, "height": 30, "mon": 1}]
         # if provided a file name
         if fileName:
             # placeholder pokecenter counter positions
@@ -50,6 +60,18 @@ class Base:
         pixel = sct_img.pixel(0, 0)
         dist = sum(map(lambda x, y: abs(x - y), color, pixel))
         return dist < 25
+
+    def readText(self, regions):
+        """Takes screenshot defined by region and reads text."""
+        text = ''
+        for r in regions:
+            sct_img = self.sct.grab(r)
+            # convert to array for OCR processing
+            img = np.array(sct_img)
+            result = self.reader(img, use_det=False, use_cls=False, use_rec=True)
+            if result.txts: # if OCR reads anything
+                text += result.txts[0]
+        return text
 
     @staticmethod
     def holdKey(key: str, seconds: float = 1.0):
@@ -110,6 +132,7 @@ class Base:
                 Base.holdKey(key, length)
             else:
                 time.sleep(length)
+        time.sleep(0.3)
 
     def isInBattle(self) -> bool:
         """Checks if battle UI is on the screen."""
@@ -128,24 +151,16 @@ class Base:
     def isShiny(self):
         """Checks if encounter contains a shiny Pokemon."""
         # Pokemon name regions
-        regions = [{"left": 410, "top": 120, "width": 250, "height": 25, "mon": 1},
-            {"left": 880, "top": 75, "width": 820, "height": 25, "mon": 1},
-            {"left": 880, "top": 115, "width": 820, "height": 25, "mon": 1}]
-        text = ''
-        for r in regions:
-            sct_img = self.sct.grab(r)
-            img = np.array(sct_img)
-            result = self.reader(img)
-            if result.txts: # if OCR reads anything
-                text += ' '.join(result.txts)
+        text = self.readText(self.regions)
         print(text)
         return 'shiny' in text.lower()
-            
-    def battleProcedure(self):
-        """Runs from unwanted encounters by default."""
-        pydi.press('right')
-        pydi.press('down')
-        pydi.press('z')
+
+    def hasPP(self):
+        """Checks if encounter contains a PP."""
+        regions = [{"left": 625, "top": 30, "width": 20, "height": 15, "mon": 1}]
+        pp = self.readText(regions)
+        pp = int(pp.strip())
+        return pp > 2
 
     @staticmethod
     def stall():
@@ -160,6 +175,12 @@ class Base:
             # prints how many minutes
             length = length + 2
             print(length)
+
+    def battleProcedure(self):
+        """Runs from unwanted encounters by default."""
+        pydi.press('right')
+        pydi.press('down')
+        pydi.press('z')
 
     def encounterProcedure(self):
         """Contains logic for how to handle an encounter"""
@@ -180,20 +201,16 @@ class Base:
             print('Shiny detected!')
             self.stall()
 
-    def accidentalEncounter(self):
-        """Checks if horde is encountered upon entering location."""
-        time.sleep(2.5)
-        # checks if battle UI has started
-        if self.isInBattle():
+    def mainTask(self):
+        """Method defining the action done as the grind for this task."""
+        while self.hasPP():
+            # uses sweet scent to start horde fight
+            pydi.press('c')
             self.encounterProcedure()
-    
-    def horde(self):
-        """Automates Pokemon horde encounters."""
-        # uses sweet scent to start horde fight
-        pydi.press('c')
-        self.encounterProcedure()
+        self.holdKey('down',1)
+        time.sleep(1)
 
-    def hunt(self, accident = True):
+    def hunt(self):
         """Overall method for healing, pathing, and grinding."""
         # if not at counter
         if not self.matchColor(self.pX, self.pY, self.pColor):
@@ -202,11 +219,8 @@ class Base:
         self.pokecenter()
         # route to grinding location
         self.toLocation()
-        # check if entering location enters battle
-        if accident:
-            self.accidentalEncounter()
-        for i in range(6):
-            self.horde()
+        # do the main grind
+        self.mainTask()
         self.teleportToPokecenter()
 
 """Basic functionality change classes"""
@@ -218,19 +232,73 @@ class Grind(Base):
         # attack horde with AOE
         pydi.press('z', presses=3)
 
+class GrindFish(Base):
+    def __init__(self, fileName):
+        super().__init__(fileName)
+
+    def isShiny(self) -> bool:
+        """Checks if single encounter contains a shiny Pokemon."""
+        # Pokemon name regions
+        regions = [{"left": 410, "top": 120, "width": 250, "height": 25, "mon": 1}]
+        text = self.readText(regions)
+        return 'shiny' in text.lower()
+
+    def hasPP(self) -> bool:
+        """Checks if first move still has PP."""
+        regions = [{"left": 2135, "top": 1135, "width": 55, "height": 20, "mon": 1}]
+        pp = self.readText(regions)
+        pp = int(re.search(r'(\d+)', pp).group())
+        return pp > 0
+
+    def fish(self):
+        """Fishes until a successful encounter."""
+        # loop until fish is encountered
+        while True:
+            # fish
+            pydi.press('shiftleft')
+            # wait for fishing dialogue
+            while not self.matchColor(1685, 270, (251, 251, 251)):
+                time.sleep(0.05)
+            # check if successful fish
+            if self.matchColor(890, 220, (251, 251, 251)):
+                pydi.press('z')
+                break
+            # dismiss dialogue
+            pydi.press('z')
+
+    def battleProcedure(self):
+        # attack single encounter
+        pydi.press('z', presses=2)
+
+    def teleportToPokecenter(self):
+        """Leaves hunting location to where teleport is possible."""
+        # leave bridge
+        pydi.press('1')
+        self.holdKey('down', 1.3)
+        # checks for lag during transition
+        while not self.matchColor(1225,520,(57, 57, 63)):
+            time.sleep(0.05)
+        super().teleportToPokecenter()
+
+    def mainTask(self):
+        while self.hasPP():
+            self.fish()
+            self.encounterProcedure()
+        time.sleep(0.1)
+
 class Gen3(Base):
     def __init__(self, fileName):
         super().__init__(fileName)
-        self.pX = 1085
-        self.pY = 557
-        self.pColor = (246, 127, 111)
+        self.pX = 1280
+        self.pY = 520
+        self.pColor = (246, 206, 183)
         
 class Gen4(Base):
     def __init__(self, fileName):
         super().__init__(fileName)
-        self.pX = 970
-        self.pY = 510
-        self.pColor = (224, 221, 224)
+        self.pX = 1275
+        self.pY = 455
+        self.pColor = (246, 206, 183)
 
 class Gen5(Base):
     def __init__(self, fileName):
@@ -240,7 +308,7 @@ class Gen5(Base):
         self.pColor = (243, 102, 180)
 
 """Combination of classes"""
-class GrindGen5(Grind, Gen5):
+class GrindGen3(Grind, Gen3):
     def __init__(self, fileName):
         super().__init__(fileName)
 
@@ -248,6 +316,6 @@ class GrindGen4(Grind, Gen4):
     def __init__(self, fileName):
         super().__init__(fileName)
 
-class GrindGen3(Grind, Gen3):
+class GrindGen5(Grind, Gen5):
     def __init__(self, fileName):
         super().__init__(fileName)

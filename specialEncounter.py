@@ -15,7 +15,7 @@ class Thief(base.Gen3):
         text = ''
         sct_img = self.sct.grab(r)
         img = np.array(sct_img)
-        result = self.reader(img)
+        result = self.reader(img, use_det=False, use_cls=False, use_rec=True)
         if result.txts:  # if OCR reads anything
             text += ' '.join(result.txts)
         return 'shiny' in text.lower()
@@ -23,6 +23,7 @@ class Thief(base.Gen3):
     def hasPP(self) -> bool:
         """Checks if first move still has PP."""
         img = pyag.screenshot(region=(1495,825,57,15))
+        pp = self.reader.recognize(np.array(img),detail=0)[0]
         pp = self.reader.recognize(np.array(img),detail=0)[0]
         pp = re.search('\d+', pp).group()
         return int(pp) > 0
@@ -87,78 +88,9 @@ class Thief(base.Gen3):
             self.battle()
         self.leave()
 
-class Payday(base.Gen5):
+class Payday(base.GrindFish, base.Gen5):
     def __init__(self, fileName: str):
         super().__init__(fileName)
-
-    def isShiny(self) -> bool:
-        """Checks if single encounter contains a shiny Pokemon."""
-        # Pokemon name regions
-        img = np.array(pyag.screenshot(region = (300,148,300,25)))
-        text = self.reader.recognize(img,detail=0)[0]
-        return 'shiny' in text.lower()
-
-    def hasPP(self) -> bool:
-        """Checks if first move still has PP."""
-        img = pyag.screenshot(region=(1495,825,57,15))
-        pp = self.reader.recognize(np.array(img),detail=0)[0]
-        pp = re.search('\d+', pp).group()
-        return int(pp) > 0
-        
-    def fish(self):
-        """Fishes until a successful encounter."""
-        encounter = False
-        # while fishing isn't successful
-        while not encounter:
-            # fish
-            pydi.press('shiftleft')
-            # wait for fishing dialogue
-            while not self.matchColor(1362,212,(251, 251, 251)):
-                time.sleep(0.2)
-            # check if successful fish
-            if self.matchColor(562,154,(251, 251, 251)):
-                encounter = True
-            # dismiss dialogue
-            pydi.press('z')
-    
-    def battle(self):
-        # checks if UI is on screen to confirm battle is not lagging
-        while not self.isBattleReady():
-            time.sleep(0.2)
-        # takes action when battle loads
-        if not self.isShiny():
-            pydi.press('z', presses = 2)
-            while self.isInBattle():
-                time.sleep(0.2)
-        else:
-            print('Shiny detected!')
-            self.stall()
-    """
-    def leave(self):
-        # leave bridge
-        pydi.press('1')
-        self.holdKey('down', 1)
-        # checks for lag during transition
-        while self.matchColor(900,415,(251, 251, 251)):
-            time.sleep(0.2)
-        time.sleep(1)
-        pydi.press('v')
-        # sleep until pokecenter counter is visible
-        while not self.matchColor(self.pX, self.pY, self.pColor):
-            time.sleep(0.2)
-    """
-
-    def hunt(self):
-        """Overall method for healing, pathing, and grinding."""
-        if self.matchColor(self.pX, self.pY, self.pColor):
-            # heals and leaves
-            self.pokecenter()
-            # route to grinding location
-            self.toLocation()
-        while self.hasPP():
-            self.fish()
-            self.battle()
-        self.leave()
 
 class Deino(base.Gen5):
     def __init__(self):
@@ -224,49 +156,26 @@ class Ursaring(base.Gen4):
         # teleport
         super(Ursaring, self).leave()
 
-class LegendaryDog(base.Gen3):
+class RoamingLegendary(base.Gen3):
     def __init__(self):
         # random file name
-        self.toCheck = ['shiny', 'entei', 'suicune', 'raikou']
-        self.regions = [(300,148,300,25), (530,98,820,25), (530,138,820,25)]
+        self.toCheck = ['shiny', 'entei', 'suicune', 'raikou', 'zapdos', 'articuno', 'moltres']
         super().__init__('litwick.csv')
-        pydi.PAUSE = 0.02
         
-    def isImportant(self):
-        """Checks if encounter contains a shiny Pokemon."""
-        # Pokemon name regions
-        text = ''
-        for r in self.regions:
-            img = pyag.screenshot(region=r)
-            img = np.array(img)
-            text += self.reader.recognize(img,detail=0)[0]
-        text = text.strip()
+    def isShiny(self):
+        """Checks if encounter contains an important Pokemon."""
+        text = self.readText(self.regions)
         print(text)
         for check in self.toCheck:
             if check in text.lower():
                 return True
         return False
-
-    def encounter(self):
-        # wait for HP to appear and then read names
-        while not self.isHPVisible():
-            time.sleep(0.2)
-        names = self.isImportant()
-        # checks if UI is on screen to confirm battle is not lagging
-        while not self.isBattleReady():
-            time.sleep(0.2)
-        # takes action when battle loads
-        if not names:
-            self.unwantedEncounter()
-        else:
-            print('Shiny or legendary detected!')
-            self.stall()
     
     def hunt(self):
         # runs back and forth
         self.holdKey('right', 0.35)
         if self.isInBattle():
-            self.encounter()
+            self.encounterProcedure()
         self.holdKey('left', 0.3)
         if self.isInBattle():
-            self.encounter()
+            self.encounterProcedure()
