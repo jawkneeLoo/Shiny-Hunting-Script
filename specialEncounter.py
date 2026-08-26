@@ -1,3 +1,4 @@
+import CONSTANTS
 import base
 import numpy as np
 import pydirectinput as pydi
@@ -7,26 +8,6 @@ import time
 class Thief(base.Gen3):
     def __init__(self, fileName: str):
         super().__init__(fileName)
-
-    def isShiny(self) -> int:
-        """Checks if single encounter contains a shiny Pokemon."""
-        # Pokemon name regions
-        r = {"left": 410, "top": 120, "width": 250, "height": 25, "mon": 1}
-        text = ''
-        sct_img = self.sct.grab(r)
-        img = np.array(sct_img)
-        result = self.reader(img, use_det=False, use_cls=False, use_rec=True)
-        if result.txts:  # if OCR reads anything
-            text += ' '.join(result.txts)
-        return 'shiny' in text.lower()
-        
-    def hasPP(self) -> bool:
-        """Checks if first move still has PP."""
-        img = pyag.screenshot(region=(1495,825,57,15))
-        pp = self.reader.recognize(np.array(img),detail=0)[0]
-        pp = self.reader.recognize(np.array(img),detail=0)[0]
-        pp = re.search('\d+', pp).group()
-        return int(pp) > 0
     
     def fish(self):
         """Fishes until a successful encounter."""
@@ -34,7 +15,7 @@ class Thief(base.Gen3):
         # while fishing isn't successful
         while not encounter:
             # fish
-            pydi.press('shiftleft')
+            pydi.press(CONSTANTS.FISHING_ROD)
             # wait for fishing dialogue
             while not self.matchColor(1362,212,(251, 251, 251)):
                 time.sleep(0.2)
@@ -42,7 +23,7 @@ class Thief(base.Gen3):
             if self.matchColor(562,154,(251, 251, 251)):
                 encounter = True
             # dismiss dialogue
-            pydi.press('z')
+            pydi.press(CONSTANTS.CONFIRM)
     
     def takeItem(self):
         #self.matchColor(1902, 436, (79, 173, 24))
@@ -66,7 +47,7 @@ class Thief(base.Gen3):
         if not self.isShiny():
             # if item is found
             if item:
-                pydi.press('z', presses = 2)
+                pydi.press(CONSTANTS.CONFIRM, presses = 2)
                 while self.isInBattle():
                     time.sleep(0.2)
                 self.takeItem()
@@ -158,9 +139,8 @@ class Ursaring(base.Gen4):
 
 class RoamingLegendary(base.Gen3):
     def __init__(self):
-        # random file name
+        super().__init__()
         self.toCheck = ['shiny', 'entei', 'suicune', 'raikou', 'zapdos', 'articuno', 'moltres']
-        super().__init__('litwick.csv')
         
     def isShiny(self):
         """Checks if encounter contains an important Pokemon."""

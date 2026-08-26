@@ -1,0 +1,5 @@
+CONFIRM = 'z'
+BIKE = '1'
+SWEET_SCENT = 'c'
+TELEPORT = 'v'
+FISHING_ROD = 'shiftleft'

@@ -5,11 +5,11 @@ from pydirectinput import FailSafeException
 
 def main():
     #task = base.GrindGen3('bfEXP.csv')
-    task = base.GrindGen4('atkEV.csv')
-    # task = base.GrindGen5('spdEV.csv')
+    #task = base.GrindGen4('atkEV.csv')
+    #task = base.GrindGen5('spdEV.csv')
     # task = base.Gen3('magikarp.csv')
-    # task = se.RoamingLegendary()
-    # task = se.Payday('dragonspiral.csv')
+    task = se.RoamingLegendary()
+    #task = se.Payday('dragonspiral.csv')
     # task = se.Thief('evergrande.csv')
     # task = se.Ursaring()
 
@@ -22,6 +22,7 @@ def main():
             task.hunt()
         except:
             task.sct.close()
+            break
 
 if __name__ == '__main__':
     main()

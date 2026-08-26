@@ -1,3 +1,4 @@
+import CONSTANTS
 import csv
 from mss.windows import MSS as mss
 import numpy as np
@@ -6,15 +7,13 @@ import pydirectinput as pydi
 from rapidocr import RapidOCR
 import re
 import time
-from typing import Tuple
+from typing import Dict, Tuple
 
 class Base:
     """A class used to represent the base functions of grinding."""
 
     def __init__(self, fileName: str = None):
-        # screen capture tool
         self.sct = mss()
-        # OCR reader
         self.reader = RapidOCR()
         # change sct regions based on monitor resolution
         if self.sct.monitors[1]['height'] == 1440:
@@ -25,11 +24,9 @@ class Base:
             self.regions = [{"left": 410, "top": 120, "width": 280, "height": 30, "mon": 1},
                 {"left": 860, "top": 75, "width": 840, "height": 30, "mon": 1},
                 {"left": 860, "top": 115, "width": 840, "height": 30, "mon": 1}]
-        # if provided a file name
         if fileName:
             # placeholder pokecenter counter positions
             self.pX, self.pY, self.pColor = 0, 0, (0,0,0)
-            # file paths for instructions
             script_dir = os.path.dirname(__file__)
             needle_path = os.path.join(
                 script_dir, 
@@ -40,7 +37,6 @@ class Base:
             self.instructions = []
             with open(needle_path, 'r') as f:
                 reader = csv.reader(f, delimiter="\t")
-                # reads list of key inputs
                 for pair in reader:
                     pair = pair[0].split(',')
                     key = pair[0]
@@ -61,15 +57,14 @@ class Base:
         dist = sum(map(lambda x, y: abs(x - y), color, pixel))
         return dist < 25
 
-    def readText(self, regions):
+    def readText(self, regions: Dict[str, int]) -> str:
         """Takes screenshot defined by region and reads text."""
         text = ''
         for r in regions:
             sct_img = self.sct.grab(r)
-            # convert to array for OCR processing
             img = np.array(sct_img)
             result = self.reader(img, use_det=False, use_cls=False, use_rec=True)
-            if result.txts: # if OCR reads anything
+            if result.txts:
                 text += result.txts[0]
         return text
 
@@ -85,7 +80,7 @@ class Base:
         """Holds a key down until pixel color is satisfied."""
         pydi.keyDown(key)
         while not self.matchColor(x, y, color):
-            time.sleep(0.05)
+            pass
         pydi.keyUp(key)
 
     def holdKeyWhile(self, key: str, x: int, y: int,
@@ -93,13 +88,13 @@ class Base:
         """Holds a key down while pixel color is satisfied."""
         pydi.keyDown(key)
         while self.matchColor(x, y, color):
-            time.sleep(0.05)
+            pass
         pydi.keyUp(key)
 
     def teleportToPokecenter(self):
         """Leaves hunting location to where teleport is possible."""
         # teleport
-        pydi.press('v')
+        pydi.press(CONSTANTS.TELEPORT)
         # sleep until pokecenter counter is visible
         while not self.matchColor(self.pX, self.pY, self.pColor):
             time.sleep(0.2)
@@ -107,17 +102,17 @@ class Base:
     def pokecenter(self):
         """Heals and leaves Pokecenters"""
         # healing at pokecenter
-        pydi.keyDown('z')
+        pydi.keyDown(CONSTANTS.CONFIRM)
         time.sleep(0.5) # delay to ensure healing starts
         pydi.keyDown('down')
         # leaving pokecenter
         while self.matchColor(5,815,(0,0,0)):
-            time.sleep(0.01)
-        pydi.keyUp('z')
+            pass
+        pydi.keyUp(CONSTANTS.CONFIRM)
         pydi.keyUp('down')
         time.sleep(0.3) # delay to fully leave transition scene
         # outside + bike
-        pydi.press('1')
+        pydi.press(CONSTANTS.BIKE)
         
     def toLocation(self):
         """Follows the list of instructions to farming location."""
@@ -172,7 +167,6 @@ class Base:
             time.sleep(60)
             pydi.press('right')
             time.sleep(60)
-            # prints how many minutes
             length = length + 2
             print(length)
 
@@ -180,17 +174,17 @@ class Base:
         """Runs from unwanted encounters by default."""
         pydi.press('right')
         pydi.press('down')
-        pydi.press('z')
+        pydi.press(CONSTANTS.CONFIRM)
 
     def encounterProcedure(self):
         """Contains logic for how to handle an encounter"""
         # wait for HP to appear and then read names
         while not self.isHPVisible():
-            time.sleep(0.05)
+            pass
         shiny = self.isShiny()
         # checks if UI is on screen to confirm battle is not lagging
         while not self.isBattleReady():
-            time.sleep(0.05)
+            pass
         # takes action when battle loads
         if not shiny:
             self.battleProcedure()
@@ -205,21 +199,16 @@ class Base:
         """Method defining the action done as the grind for this task."""
         while self.hasPP():
             # uses sweet scent to start horde fight
-            pydi.press('c')
+            pydi.press(CONSTANTS.SWEET_SCENT)
             self.encounterProcedure()
-        self.holdKey('down',1)
-        time.sleep(1)
 
     def hunt(self):
         """Overall method for healing, pathing, and grinding."""
         # if not at counter
         if not self.matchColor(self.pX, self.pY, self.pColor):
             self.teleportToPokecenter()
-        # heals and leaves
         self.pokecenter()
-        # route to grinding location
         self.toLocation()
-        # do the main grind
         self.mainTask()
         self.teleportToPokecenter()
 
@@ -230,7 +219,7 @@ class Grind(Base):
 
     def battleProcedure(self):
         # attack horde with AOE
-        pydi.press('z', presses=3)
+        pydi.press(CONSTANTS.CONFIRM, presses=3)
 
 class GrindFish(Base):
     def __init__(self, fileName):
@@ -252,28 +241,26 @@ class GrindFish(Base):
 
     def fish(self):
         """Fishes until a successful encounter."""
-        # loop until fish is encountered
         while True:
-            # fish
-            pydi.press('shiftleft')
+            pydi.press(CONSTANTS.FISHING_ROD, presses=2)
             # wait for fishing dialogue
             while not self.matchColor(1685, 270, (251, 251, 251)):
-                time.sleep(0.05)
+                pass
             # check if successful fish
             if self.matchColor(890, 220, (251, 251, 251)):
-                pydi.press('z')
+                pydi.press(CONSTANTS.CONFIRM)
                 break
             # dismiss dialogue
-            pydi.press('z')
+            pydi.press(CONSTANTS.CONFIRM)
 
     def battleProcedure(self):
         # attack single encounter
-        pydi.press('z', presses=2)
+        pydi.press(CONSTANTS.CONFIRM, presses=2)
 
     def teleportToPokecenter(self):
         """Leaves hunting location to where teleport is possible."""
         # leave bridge
-        pydi.press('1')
+        pydi.press(CONSTANTS.BIKE)
         self.holdKey('down', 1.3)
         # checks for lag during transition
         while not self.matchColor(1225,520,(57, 57, 63)):
@@ -287,21 +274,21 @@ class GrindFish(Base):
         time.sleep(0.1)
 
 class Gen3(Base):
-    def __init__(self, fileName):
+    def __init__(self, fileName: str = None):
         super().__init__(fileName)
         self.pX = 1280
         self.pY = 520
         self.pColor = (246, 206, 183)
         
 class Gen4(Base):
-    def __init__(self, fileName):
+    def __init__(self, fileName: str = None):
         super().__init__(fileName)
         self.pX = 1275
         self.pY = 455
         self.pColor = (246, 206, 183)
 
 class Gen5(Base):
-    def __init__(self, fileName):
+    def __init__(self, fileName: str = None):
         super().__init__(fileName)
         self.pX = 1242
         self.pY = 623
@@ -309,13 +296,13 @@ class Gen5(Base):
 
 """Combination of classes"""
 class GrindGen3(Grind, Gen3):
-    def __init__(self, fileName):
+    def __init__(self, fileName: str = None):
         super().__init__(fileName)
 
 class GrindGen4(Grind, Gen4):
-    def __init__(self, fileName):
+    def __init__(self, fileName: str = None):
         super().__init__(fileName)
 
 class GrindGen5(Grind, Gen5):
-    def __init__(self, fileName):
+    def __init__(self, fileName: str = None):
         super().__init__(fileName)
